@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "cd cleanmail-frontend && npm run build"
+    "build": "cd cleanmail-frontend && npm install && npm run build"
   },
   "engines": {
     "npm": "10.2",
