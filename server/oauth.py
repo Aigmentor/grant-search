@@ -25,7 +25,7 @@ def get_oauth_redirect_url():
     if get_mode() == MODE_ENUM.LOCAL:
         return 'http://localhost:3000/app/oauth_redirect'
     else:
-        return 'https://cleanmail-abc7a98eaa1f.herokuapp.com//app/oauth_redirect'
+        return 'https://cleanmail-abc7a98eaa1f.herokuapp.com/app/oauth_redirect'
 
 
 def get_client_secret_file() -> Path:
