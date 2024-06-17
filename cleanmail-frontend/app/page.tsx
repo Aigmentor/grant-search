@@ -1,6 +1,27 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Login from "./components/login";
+
+export default function Home() : React.ReactElement {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
+  
+  useEffect(() => {
+    axios.get("/api/auth").then((res) => {
+      setIsLoggedIn(res.data.isLoggedIn);
+    });
+  });
+
+  if (isLoggedIn === undefined) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isLoggedIn) {
+    return <Login/>
+  }
+  
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">

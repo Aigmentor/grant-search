@@ -1,1 +1,1 @@
-web:flask --app server.app --debug run
+web: flask --app server.app --debug run

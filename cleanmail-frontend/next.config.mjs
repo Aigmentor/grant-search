@@ -1,7 +1,28 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-    output: 'export',
-    basePath: '/static',
+
+const dev = process.env.NODE_ENV !== 'production';
+
+const devConfig = {
+    // output: 'export',
+    // basePath: '/static',
+    async rewrites() {
+		return [
+			{
+				source: '/app/:path*',
+				destination: 'http://127.0.0.1:5000/app/:path*',
+			},
+			{
+				source: '/api/:path*',
+				destination: 'http://127.0.0.1:5000/api/:path*',
+			},
+		]
+	},
 };
 
+const productionConfig = {
+    output: 'export',
+    basePath: '/static',
+}
+
+const nextConfig = dev ? devConfig : productionConfig;
 export default nextConfig;
