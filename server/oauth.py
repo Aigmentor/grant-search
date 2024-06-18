@@ -11,7 +11,6 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
-from google_auth_oauthlib.flow import Flow
 
 import requests
 import flask

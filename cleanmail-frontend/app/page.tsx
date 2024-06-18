@@ -7,12 +7,15 @@ import Login from "./components/login";
 
 export default function Home() : React.ReactElement {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
-  
+  const [status, setStatus] = useState<Map<String, any>>(undefined);
   useEffect(() => {
     axios.get("/api/auth").then((res) => {
       setIsLoggedIn(res.data.isLoggedIn);
+      axios.get("/api/status").then((res) => {
+        setStatus(res.data);
+      })
     });
-  });
+  }, []);
 
   if (isLoggedIn === undefined) {
     return <div>Loading...</div>;
@@ -22,6 +25,10 @@ export default function Home() : React.ReactElement {
     return <Login/>
   }
   
+  return <div>
+    <h1>Welcome to CleanMail {status && `, ${status['email']}`}</h1>
+    <p> {status && `Current User Status: ${status['status']}`}</p>
+  </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
