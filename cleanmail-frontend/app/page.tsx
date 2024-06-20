@@ -11,6 +11,9 @@ export default function Home() : React.ReactElement {
   useEffect(() => {
     axios.get("/api/auth").then((res) => {
       setIsLoggedIn(res.data.isLoggedIn);
+      if (!res.data.isLoggedIn) {
+        return;
+      }
       axios.get("/api/status").then((res) => {
         setStatus(res.data);
       })
