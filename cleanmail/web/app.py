@@ -1,10 +1,11 @@
 import logging
 import os
+
 from flask import Flask, request, session, redirect, url_for
-from common import MODE_ENUM, get_mode
-import db.models as db
-import oauth as oauth
-import web_api as web_api
+from cleanmail.common import MODE_ENUM, get_mode
+import cleanmail.db.models as db
+import cleanmail.web.oauth as oauth
+import cleanmail.web.web_api as web_api
 logging.basicConfig(level=logging.DEBUG)
 
 if get_mode() == MODE_ENUM.LOCAL:

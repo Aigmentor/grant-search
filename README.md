@@ -2,7 +2,8 @@
 
 ## To Run locally:
 ### Setup environment
-1. create a virtual env `.venv` under the root directory
+1. create a virtual env `.venv` under the root directory:
+`python3 -m venv .venv`
 2. active that virtual env:
 `./.venv/bin/activate`
 3. create a `.env` file. It should look like:

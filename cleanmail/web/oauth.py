@@ -2,8 +2,8 @@ import json
 import os
 from pathlib import Path
 
-from server.bin.encrypt_secrets import decrypt_file
-from server.common import DECRYPT_KEY, MODE_ENUM, get_mode
+from cleanmail.bin.encrypt_secrets import decrypt_file
+from cleanmail.common import DECRYPT_KEY, MODE_ENUM, get_mode
 
 # Set this to avoid scope change warnings. I don't understand where they come from.
 # It started when I added support for mobile.

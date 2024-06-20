@@ -1,12 +1,14 @@
-# models.py
 from typing import Type, TypeVar
-from sqlalchemy import JSON, Boolean, ForeignKey, create_engine, Column, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, asc, Column, Integer, String, desc
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-import google.oauth2.credentials as oauth2_credentials
-import server.db.database as database
+from sqlalchemy.orm import relationship
+
+import cleanmail.db.database as database
 
 Base = declarative_base()
+
+def init_db():
+    Base.metadata.create_all(database.engine)
 
 class UserStatus(Base):
     __tablename__ = 'user_status'
@@ -25,7 +27,7 @@ class GoogleUser(Base):
     credentials = Column(String)
     status = relationship("UserStatus", back_populates="user", uselist=False)
     emails = relationship("GoogleEmail", back_populates="user")
-    
+
     @classmethod
     def get_or_create(cls: Type[T], email: str, serialized_credentials: str) -> T:
         session = database.get_session()
@@ -45,7 +47,11 @@ class GoogleEmail(Base):
     id = Column(Integer, primary_key=True)
     gmail_id = Column(String)
     is_read = Column(Boolean)
+    date_sent = Column(DateTime)
 
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship("GoogleUser", back_populates="emails")
 
+    __table_args__ = (
+        Index('idx_date_sent_is_read', user_id, asc('date_sent'), 'is_read'),
+    )
