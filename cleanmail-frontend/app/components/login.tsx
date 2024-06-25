@@ -1,9 +1,8 @@
-import Image from 'next/image'
 import React from 'react'
 export default function Login() : React.ReactElement {
 
     const state=`rio_state_${window.crypto.randomUUID()}`
-    return <button style={{fontSize: "150%"}}> 
+    return <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded"> 
         <a style={{textDecoration: "none"}} href={`/app/login/${state}`}>
         <img 
             alt="Google Logo"

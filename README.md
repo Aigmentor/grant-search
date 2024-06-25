@@ -28,3 +28,14 @@ After that update the requirements.txt: `pip freeze -> requirements.txt`
 NPM works similarly: `npm install XXXX`
 NPM automatically updates `package.json` and `package.json.lock`
 Note that on Heroky none of the "development" dependencies are installed, so if they are needed for next.js compilation make sure to include them in the main dependencies.
+
+### Database upgrades
+TO reset the DB:
+`python -m cleanmail.db.reset`
+
+To create an upgrade script:
+`alembic revision --autogenerate -m "UPGRADE DESCRIPTION"`
+
+To upgrade:
+`alembic upgrade head`
+

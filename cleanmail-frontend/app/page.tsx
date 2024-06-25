@@ -28,9 +28,16 @@ export default function Home() : React.ReactElement {
     return <Login/>
   }
   
+  const logout = () => {
+    axios.post("/api/logout").then(() => {
+      setIsLoggedIn(false);
+    });
+  }
+
   return <div>
     <h1>Welcome to CleanMail {status && `, ${status['email']}`}</h1>
     <p> {status && `Current User Status: ${status['status']}`}</p>
+    <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" onClick={logout}>Logout</button>
   </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">

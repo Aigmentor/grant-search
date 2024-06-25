@@ -20,7 +20,7 @@ def login_required(f):
         if not is_logged_in:
             return jsonify({'error': 'Not logged in'}), 400
         session = get_session()
-        user = db.GoogleUser.get_or_create(get_username())
+        user = db.GoogleUser.get_or_create(session, get_username())
         return f(user, credentials, session, *args, **kwargs)
     return decorated_function
 
@@ -36,10 +36,16 @@ def handle_status():
     is_logged_in = credentials is not None and not credentials.expired
     if not is_logged_in:
         return jsonify({'error': 'Not logged in'}), 400
-    user = db.GoogleUser.get_or_create(get_username(), oauth.serialize_credentials(credentials))       
+    db_session = get_session()
+    user = db.GoogleUser.get_or_create(db_session, get_username(), oauth.serialize_credentials(credentials))       
     return jsonify({'status': user.status.status, 'email': user.email})
 
 @login_required
 @api.route("/analyze_email")
 def analyze_email(user, credentials, session):    
     return jsonify({'status': 'success', 'email': user.email})
+
+@api.route("/logout", methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'status': 'success'})

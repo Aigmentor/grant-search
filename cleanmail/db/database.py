@@ -1,11 +1,15 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 DATABASE_URI = os.environ['POSTGRES_URL']
 
 engine = create_engine(DATABASE_URI)
 Session = sessionmaker(bind=engine)
 
+ScopedSession = scoped_session(Session)
 def get_session():
     return Session()
+
+def get_scoped_session():
+    return ScopedSession()

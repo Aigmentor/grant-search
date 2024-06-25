@@ -1,6 +1,7 @@
 import logging
 import os
 from flask import Flask, request, session, redirect, url_for
+from cleanmail.db.database import get_session
 from common import MODE_ENUM, get_mode
 import db.models as db
 import oauth as oauth
@@ -32,7 +33,8 @@ def handle_login():
     if oauth.oauth_handle_redirect():
         credentials = oauth.get_credentials_from_flask_session()
         status = 'login_success'
-        user = db.GoogleUser.get_or_create_user(session.get('username'), oauth.serialize_credentials(credentials))       
+        db_session = get_session()
+        user = db.GoogleUser.get_or_create_user(db_session, session.get('username'), oauth.serialize_credentials(credentials))       
     else:
         status = 'login_failure'
 
