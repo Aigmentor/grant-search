@@ -196,6 +196,12 @@ def list_messages_by_message_id(credentials, messages: list, max_items: int) -> 
         return resolved_messages
 
 
+def get_thread_by_id(credentials, thread_id: str) -> dict:
+    return _exec_with_rate_limit(
+        get_latest_message_by_gthread_id_on_thread, credentials, thread_id
+    )
+
+
 # list messages by message ID from a list of threads, using the latest message in each thread
 def list_messages_by_gthread_id(
     credentials: Credentials, gthreads: list, max_items: int
@@ -205,14 +211,11 @@ def list_messages_by_gthread_id(
         logging.info("No gmail threads found.")
         return resolved_messages
     else:
-        # logging.info(f"Retrieved {len(gthreads)} gmail threads.")
         gthreads = gthreads[0:max_items]
         by_id = {}
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             results = executor.map(
-                lambda gthread_id: _exec_with_rate_limit(
-                    get_latest_message_by_gthread_id_on_thread, credentials, gthread_id
-                ),
+                lambda gthread_id: get_thread_by_id(credentials, gthread_id),
                 [x["id"] for x in gthreads],
             )
         results = [r for r in results if r is not None]
@@ -222,7 +225,7 @@ def list_messages_by_gthread_id(
 def list_message_ids_by_query(
     credentials: Credentials, query: str, max: int = 30
 ) -> list[str]:
-    service = get_service(credentials=credentials)
+    service = get_local_service(credentials=credentials)
     return page_all_items(
         lambda next_page_token: service.users()
         .messages()
@@ -297,9 +300,11 @@ def list_messages_since_history_id(
 # function to list messages ids from gmail matching a query string, organized by thread
 # gets latest threads and returns a mapping of gthread ID to the latest message in the thread
 def list_thread_ids_by_query(
-    credentials: Credentials, query: str, max: int = 30
+    credentials: Credentials,
+    query: str,
+    max: int = 30,
 ) -> dict:
-    service = get_service(credentials=credentials)
+    service = get_local_service(credentials=credentials)
 
     return page_all_items(
         lambda next_page_token: service.users()
