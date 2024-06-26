@@ -62,7 +62,12 @@ def page_all_items(func: callable, item_key: str, max_items: int = None) -> list
     next_page_token = None
     # Rest of the function implementation goes here
     while max_items is None or len(items) < max_items:
-        results = func(next_page_token)
+        try:
+            results = func(next_page_token)
+        except HttpError as e:
+            logging.info("Error: %s", e)
+            results = func(next_page_token)
+
         items.extend(results.get(item_key, []))
         next_page_token = results.get("nextPageToken")
         if next_page_token is None:
@@ -299,7 +304,7 @@ def list_thread_ids_by_query(
     return page_all_items(
         lambda next_page_token: service.users()
         .threads()
-        .list(pageToken=next_page_token, userId="me", q=query)
+        .list(pageToken=next_page_token, userId="me", q=query, maxResults=500)
         .execute(),
         "threads",
         max,
