@@ -1,17 +1,23 @@
+import argparse
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import datetime
 import logging
 import random
 import re
+import sys
 import threading
-from cleanmail.db.database import get_scoped_session
+from cleanmail.db.database import get_scoped_session, get_session
 from cleanmail.db.models import GmailSender, GoogleUser, GmailThread
 from cleanmail.gmail import api as gmail_api
 from sqlalchemy.orm import Session
 
-MAX_PROCESS_EMAIL_THREADS = 5
+MAX_PROCESS_EMAIL_THREADS = 10
 
 sender_lock = threading.Lock()
+
+# Maps from user_id to a dictionary of email to sender
+sender_cache = defaultdict(dict)
 
 
 def _process_message(user: GoogleUser, message: dict):
@@ -23,11 +29,10 @@ def _process_message(user: GoogleUser, message: dict):
     from_email = None
     name = None
     for message in message["messages"]:
-        if "labelIds" not in message:
-            logging.warn(f"Skipping message without labelIds: {message}")
-            continue
-        for label in message["labelIds"]:
-            labels.add(label)
+        # Some weird emails don't have any labels
+        if "labelIds" in message:
+            for label in message["labelIds"]:
+                labels.add(label)
         headers = message["payload"]["headers"]
         pattern = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
         for header in headers:
@@ -50,7 +55,7 @@ def _process_message(user: GoogleUser, message: dict):
             max_date = date
 
     if name is None:
-        print("Failed to find From header in: {headers}")
+        print(f"Failed to find From header in: {headers}")
         return
 
     if max_date is not None:
@@ -66,11 +71,7 @@ def _process_message(user: GoogleUser, message: dict):
     if thread is not None:
         pass
     else:
-        sender = (
-            session.query(GmailSender)
-            .filter_by(user_id=user.id, email=from_email)
-            .first()
-        )
+        sender = sender_cache[user.id].get(from_email)
         if sender is None:
             # Grab the lock, check again for sender, then create if necessary
             with sender_lock:
@@ -84,6 +85,7 @@ def _process_message(user: GoogleUser, message: dict):
                     sender = GmailSender(user_id=user.id, name=name, email=from_email)
                     session.add(sender)
                     session.commit()
+                sender_cache[user.id][from_email] = sender
 
         thread = GmailThread(
             thread_id=thread_id,
@@ -101,39 +103,49 @@ def _process_message(user: GoogleUser, message: dict):
     return thread
 
 
-def scan(session: Session, user: GoogleUser, max_items: int = 1000):
+def scan(
+    session: Session, user: GoogleUser, sample: int = 2000, max_items: int = 200000
+):
     # First check what we've already scanned
     count = session.query(GmailThread).filter_by(user_id=user.id).count()
     logging.info(f"Already scanned {count} emails for user {user.email}")
 
-    oldest_email = (
-        session.query(GmailThread)
-        .filter_by(user_id=user.id)
-        .order_by(GmailThread.most_recent_date)
-        .first()
-    )
-    if oldest_email:
-        oldest_email_date = oldest_email.most_recent_date
-    else:
-        oldest_email_date = datetime.datetime.now()
-    logging.info(f"Oldest email: {oldest_email_date}")
+    # oldest_email = (
+    #     session.query(GmailThread)
+    #     .filter_by(user_id=user.id)
+    #     .order_by(GmailThread.most_recent_date)
+    #     .first()
+    # )
+    # if oldest_email:
+    #     oldest_email_date = oldest_email.most_recent_date
+    # else:
+    #     oldest_email_date = datetime.datetime.now()
+    # logging.info(f"Oldest email: {oldest_email_date}")
 
-    max = max_items - count
-    if max <= 0:
-        logging.info(f"Already scanned {count} emails for user {user.email}")
-        return
+    # max = max_items - count
+    # if max <= 0:
+    #     logging.info(f"Already scanned {count} emails for user {user.email}")
+    #     return
 
     # Scan 50x as many emails, then subsample.
+    start_time = datetime.datetime.now()
     message_ids = gmail_api.list_thread_ids_by_query(
         user.get_google_credentials(),
-        "before:" + oldest_email_date.strftime("%Y/%m/%d"),
-        max * 50,
+        "",
+        max_items,
     )
-    if len(message_ids) > max:
-        message_ids = random.sample(message_ids, max)
-    print(f"message_ids {len(message_ids)} max: {max}")
+    logging.info(
+        f"Listed {len(message_ids)} message ids in {datetime.datetime.now() - start_time}s"
+    )
+    logging.info(
+        f"Sampling {sample} of {len(message_ids)}. Sample rate: {sample * 100.0/len(message_ids)}%"
+    )
+
+    if len(message_ids) > sample:
+        message_ids = random.sample(message_ids, sample)
+
     messages = gmail_api.list_messages_by_gthread_id(
-        user.get_google_credentials(), message_ids, max_items=max
+        user.get_google_credentials(), message_ids, max_items=max_items
     )
 
     with ThreadPoolExecutor(max_workers=MAX_PROCESS_EMAIL_THREADS) as executor:
@@ -173,6 +185,41 @@ def compute_sender_stats(session: Session, user: GoogleUser):
     for stats in senders_with_stats[0:200]:
         percent_read = 100.0 - (stats[2] * 100.0 / stats[1])
         logging.info(
-            f"Sender: {stats[0].name} ({stats[0].email}) {stats[1]} unread: {percent_read}% replied: {stats[3]} important: {stats[4]}"
+            f"Sender: {stats[0].name} ({stats[0].email}) {stats[1]} read: {percent_read}% replied: {stats[3]} important: {stats[4]}"
         )
     return senders_with_stats
+
+
+if __name__ == "__main__":
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    parser = argparse.ArgumentParser(description="Prints stats for a user's emails")
+    parser.add_argument(
+        "--email", type=str, help="Email address of user to scan", required=True
+    )
+    parser.add_argument(
+        "--sample",
+        type=int,
+        help="Emails to Sample. If not set only existing scanned emails are used",
+        default=None,
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Debug mode run", default=False
+    )
+
+    args = parser.parse_args()
+
+    session = get_session()
+    user = session.query(GoogleUser).filter_by(email=args.email).first()
+    if user is None:
+        raise Exception(f"User not found for email: '{args.email}'")
+
+    if args.sample:
+        print(f"Sampling {args.sample} emails")
+        scan(
+            session,
+            user,
+            args.sample,
+            max_items=args.sample * 5 if args.debug else None,
+        )
+
+    compute_sender_stats(session, user)
