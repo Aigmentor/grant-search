@@ -1,4 +1,5 @@
 from functools import wraps
+import logging
 from flask import Blueprint, jsonify, session
 
 
@@ -44,6 +45,7 @@ def handle_status(user, credentials, session):
     is_logged_in = credentials is not None and not credentials.expired
     if not is_logged_in:
         return jsonify({"error": "Not logged in"}), 400
+    logging.info(f"User: {user.email} {user.status}")
     return jsonify(
         {
             "status": user.status.status,

@@ -1,6 +1,14 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+import time
 import json
 import logging
+from typing import Optional
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 import sys
 import threading
 
@@ -9,8 +17,7 @@ from cleanmail.db.redis import publish, subscribe
 from cleanmail.db.models import GoogleUser
 from cleanmail.db import database
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
+_MAX_SCAN_THREADS = 5
 _WORKER_TASKS_QUEUE = "worker_queue"
 _MESSAGE_TYPE = "worker_task"
 
@@ -31,7 +38,7 @@ def _send_background_task(task_name: str, spec: dict):
 
 def _process_scan_email(user_id: int):
     session = database.get_session()
-    user = session.query(GoogleUser).get(user_id)
+    user = session.get(GoogleUser, user_id)
     if user is None:
         logging.error(f"User {user_id} not found")
         return
@@ -42,6 +49,8 @@ def _process_scan_email(user_id: int):
 
 
 def _process_queue_entry(queue_spec):
+    logging.info(f"Worker got task: {json.dumps(queue_spec)}")
+
     task_name = queue_spec.get("task_name")
     if task_name == _TASK_ENUM.SCAN_EMAIL:
         user_id = queue_spec.get("user_id")
@@ -62,10 +71,32 @@ def _consume_queue():
             logging.exception(f"Error consuming queue: {e}")
 
 
+def scan_user(user_id: int) -> Optional[GoogleUser]:
+    session = database.get_scoped_session()
+    user = session.query(GoogleUser).get(user_id)
+    logging.info(f"Scanning user {user.email}")
+    is_complete = scan.scan(session, user, 5000)
+    return None if is_complete else user_id
+
+
+def scan_users():
+    logging.info("Scanning all users")
+    session = database.get_session()
+    users = session.query(GoogleUser).all()
+    logging.info(f"Found {len(users)} users to scan")
+    user_ids = [user.id for user in users]
+    with ThreadPoolExecutor(max_workers=_MAX_SCAN_THREADS) as executor:
+        while len(user_ids) > 0:
+            results = executor.map(scan_user, user_ids)
+            user_ids = [user_id for user_id in results if user_id is not None]
+            logging.info(f"Remaining users to scan: {len(user_ids)}")
+
+
 if __name__ == "__main__":
+    logging.error("Starting worker")
     parser = argparse.ArgumentParser(
         description="Queue worker for Processing background tasks"
     )
     args = parser.parse_args()
-
+    threading.Thread(target=scan_users).start()
     _consume_queue()

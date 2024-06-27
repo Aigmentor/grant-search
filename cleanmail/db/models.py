@@ -49,6 +49,7 @@ class GoogleUser(Base):
     status = relationship("UserStatus", back_populates="user", uselist=False)
     threads = relationship("GmailThread", back_populates="user")
     senders = relationship("GmailSender", back_populates="user")
+    total_email_count = Column(Integer)
 
     def get_google_credentials(self):
         return oauth.deserialize_credentials(self.credentials)

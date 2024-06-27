@@ -26,9 +26,9 @@ sender_lock = threading.Lock()
 sender_cache = defaultdict(dict)
 
 
-def _process_thread_by_id(user: GoogleUser, thread_id: str):
+def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str):
     try:
-        message = gmail_api.get_thread_by_id(user.get_google_credentials(), thread_id)
+        message = gmail_api.get_thread_by_id(user_google_credentials, thread_id)
         if message is None:
             logging.warn(f"Failed to get message for thread_id: {thread_id}")
             return
@@ -83,28 +83,28 @@ def _process_thread_by_id(user: GoogleUser, thread_id: str):
         if thread is not None:
             pass
         else:
-            sender_id = sender_cache[user.id].get(from_email)
+            sender_id = sender_cache[user_id].get(from_email)
             if sender_id is None:
                 # Grab the lock, check again for sender, then create if necessary
                 with sender_lock:
                     sender = (
                         session.query(GmailSender)
-                        .filter_by(user_id=user.id, email=from_email)
+                        .filter_by(user_id=user_id, email=from_email)
                         .first()
                     )
                     if sender is None:
                         logging.info(f"Creating new sender: {name} {from_email}")
                         sender = GmailSender(
-                            user_id=user.id, name=name, email=from_email
+                            user_id=user_id, name=name, email=from_email
                         )
                         session.add(sender)
                         session.commit()
                     sender_id = sender.id
-                    sender_cache[user.id][from_email] = sender_id
+                    sender_cache[user_id][from_email] = sender_id
 
             thread = GmailThread(
                 thread_id=thread_id,
-                user_id=user.id,
+                user_id=user_id,
                 is_read=not is_unread,
                 sender=sender_id,
                 has_replied=replied,
@@ -122,71 +122,84 @@ def _process_thread_by_id(user: GoogleUser, thread_id: str):
 
 def scan(
     session: Session, user: GoogleUser, sample: int = 2000, max_items: int = 200000
-):
-    # First check what we've already scanned
-    count = session.query(GmailThread).filter_by(user_id=user.id).count()
-    logging.info(f"Already scanned {count} emails for user {user.email}")
-    user_id = user.id
-    # oldest_email = (
-    #     session.query(GmailThread)
-    #     .filter_by(user_id=user.id)
-    #     .order_by(GmailThread.most_recent_date)
-    #     .first()
-    # )
-    # if oldest_email:
-    #     oldest_email_date = oldest_email.most_recent_date
-    # else:
-    #     oldest_email_date = datetime.datetime.now()
-    # logging.info(f"Oldest email: {oldest_email_date}")
+) -> bool:
+    """
+    Scans a user's emails and stores them in the database
+    Returns True if the scan retrieved all the user's emails, False otherwise
+    """
+    try:
+        user_id = user.id
+        status = user.status
+        status.status = "scanning"
+        session.commit()
+        # First check what we've already scanned
+        count = session.query(GmailThread).filter_by(user_id=user_id).count()
+        logging.info(f"Already scanned {count} emails for user {user.email}")
 
-    # max = max_items - count
-    # if max <= 0:
-    #     logging.info(f"Already scanned {count} emails for user {user.email}")
-    #     return
-
-    # Scan 50x as many emails, then subsample.
-    status = user.status
-    status.status = "scanning"
-    session.commit()
-    start_time = datetime.datetime.now()
-    message_ids = list_thread_ids_by_query_in_parallel(
-        user.get_google_credentials(), ""
-    )
-    logging.info(
-        f"Listed {len(message_ids)} message ids in {datetime.datetime.now() - start_time}s"
-    )
-    logging.info(
-        f"Sampling {sample} of {len(message_ids)}. Sample rate: {sample * 100.0/len(message_ids)}%"
-    )
-
-    if len(message_ids) > sample:
-        message_ids = random.sample(message_ids, sample)
-
-    start_time = datetime.datetime.now()
-    with ThreadPoolExecutor(max_workers=MAX_PROCESS_EMAIL_THREADS) as executor:
-        results = executor.map(
-            lambda msg: _process_thread_by_id(user, msg["id"]), message_ids
+        user_credentials = user.get_google_credentials()
+        start_time = datetime.datetime.now()
+        message_ids = list_thread_ids_by_query_in_parallel(user_credentials, "")
+        logging.info(
+            f"Listed {len(message_ids)} message ids in {datetime.datetime.now() - start_time}s"
         )
-        for i, result in enumerate(results):
-            if i % 500 == 499:
-                time_elapsed = datetime.datetime.now() - start_time
-                logging.info(
-                    f"Processed {i+1} messages in {time_elapsed.total_seconds()}s: {(i+1.0)/time_elapsed.total_seconds()} messages/s"
-                )
-                status.data = {
-                    "email_count": session.query(GmailThread)
-                    .filter_by(user_id=user_id)
-                    .count(),
-                }
-                session.commit()
+        if count >= len(message_ids):
+            logging.info("No new emails to scan")
+            return True
 
-    status.status = "scanned"
+        user.total_email_count = len(message_ids)
+        session.commit()
+        existing_thread_query = (
+            session.query(GmailThread)
+            .filter_by(user_id=user_id)
+            .with_entities(GmailThread.thread_id)
+        )
+        existing_thread_ids = set([x[0] for x in existing_thread_query.all()])
+        message_ids = [x for x in message_ids if x["id"] not in existing_thread_ids]
+        logging.info(
+            f"Sampling {sample} of {len(message_ids)}. Sample rate: {sample * 100.0/len(message_ids)}%"
+        )
 
-    status.data = {
-        "last_scan": datetime.datetime.now().isoformat(),
-        "email_count": session.query(GmailThread).filter_by(user_id=user_id).count(),
-    }
+        scanning_all_remaining = True
+        if len(message_ids) > sample:
+            message_ids = random.sample(message_ids, sample)
+            scanning_all_remaining = False
+
+        start_time = datetime.datetime.now()
+        with ThreadPoolExecutor(max_workers=MAX_PROCESS_EMAIL_THREADS) as executor:
+            results = executor.map(
+                lambda msg: _process_thread_by_id(user_credentials, user_id, msg["id"]),
+                message_ids,
+            )
+            for i, result in enumerate(results):
+                if i % 500 == 499:
+                    time_elapsed = datetime.datetime.now() - start_time
+                    logging.info(
+                        f"Processed {i+1} messages in {time_elapsed.total_seconds()}s: {(i+1.0)/time_elapsed.total_seconds()} messages/s"
+                    )
+                    status.data = {
+                        "email_count": session.query(GmailThread)
+                        .filter_by(user_id=user_id)
+                        .count(),
+                    }
+                    session.commit()
+        status.status = "scanned"
+
+        status.data = {
+            "last_scan": datetime.datetime.now().isoformat(),
+            "email_count": session.query(GmailThread)
+            .filter_by(user_id=user_id)
+            .count(),
+        }
+    except Exception as e:
+        logging.exception(f"Error scanning emails: {e}")
+        status.status = "scanning error"
+        status.data = {
+            "last_scan": datetime.datetime.now().isoformat(),
+            "scan_error": str(e),
+        }
+        return False
     session.commit()
+    return scanning_all_remaining
 
 
 def compute_sender_stats(session: Session, user: GoogleUser):

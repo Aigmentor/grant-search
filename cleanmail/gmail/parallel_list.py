@@ -5,9 +5,9 @@ import logging
 from time import sleep
 from typing import List
 
-from cleanmail.gmail.api import list_thread_ids_by_query
+from cleanmail.gmail.api import _exec_with_rate_limit, list_thread_ids_by_query
 
-MAX_PROCESS_EMAIL_THREADS = 14
+MAX_PROCESS_EMAIL_THREADS = 10
 
 
 def _with_retry(callable, *args, **kwargs):
@@ -53,11 +53,11 @@ def list_thread_ids_by_query_in_parallel(
                     (
                         after_time,
                         executor.submit(
-                            _with_retry,
+                            _exec_with_rate_limit,
                             list_thread_ids_by_query,
                             credentials,
                             time_query,
-                            4000,
+                            10000,
                         ),
                     )
                 )

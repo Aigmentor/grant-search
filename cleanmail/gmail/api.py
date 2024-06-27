@@ -8,6 +8,18 @@ from googleapiclient.errors import HttpError
 import base64
 import email
 import logging
+
+logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
+
+
+class CustomFilter(logging.Filter):
+    def filter(self, record):
+        print(f"logger called for {record}")
+        return not record.getMessage().startswith("Refreshing credentials")
+
+
+logger = logging.getLogger("google_auth_httplib2")
+logger.addFilter(CustomFilter())
 import threading
 import random
 from concurrent.futures import ThreadPoolExecutor

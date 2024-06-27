@@ -90,7 +90,15 @@ export default function Home() : React.ReactElement {
     <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" onClick={logout}>Logout</button>
     <div>&nbsp;</div>
     <div>
-      <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" disabled={scanDisabled} onClick={sendScan}>Scan Emails</button>
+    <button
+      disabled={scanDisabled}
+      onClick={sendScan}
+      className={`px-4 py-2 text-white font-bold ${scanDisabled ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700'}`}
+    >
+  Scan Email
+</button>
+    
+      {/* <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" disabled={scanDisabled} onClick={sendScan}>Scan Emails</button> */}
       </div>
     
   </div>
