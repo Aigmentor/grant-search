@@ -66,7 +66,9 @@ class GoogleUser(Base):
             session.commit()
             status = UserStatus(user_id=user.id, status="created", data={})
             session.add(status)
-            session.commit()
+        else:
+            user.credentials = serialized_credentials
+        session.commit()
         return user
 
 
