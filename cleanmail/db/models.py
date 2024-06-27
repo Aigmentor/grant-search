@@ -80,6 +80,20 @@ class GmailSender(Base):
 
     email = Column(String)
     name = Column(String)
+    emails_sent = Column(Integer)
+    emails_unread = Column(Integer)
+    emails_important = Column(Integer)
+    emails_replied = Column(Integer)
+
+    def read_fraction(self):
+        return 1 - (self.emails_unread * 1.0 / self.emails_sent)
+
+    def replied_fraction(self):
+        return self.emails_replied * 1.0 / self.emails_sent
+
+    def important_fraction(self):
+        return self.emails_important * 1.0 / self.emails_sent
+
     __table_args__ = (Index("idx_gmail_sender_email", user_id, email),)
 
 

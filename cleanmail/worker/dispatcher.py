@@ -5,6 +5,8 @@ import json
 import logging
 from typing import Optional
 
+from cleanmail.gmail.stats import compute_stats
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -73,9 +75,10 @@ def _consume_queue():
 
 def scan_user(user_id: int) -> Optional[GoogleUser]:
     session = database.get_scoped_session()
-    user = session.query(GoogleUser).get(user_id)
+    user = session.get(GoogleUser, user_id)
     logging.info(f"Scanning user {user.email}")
     is_complete = scan.scan(session, user, 5000)
+    compute_stats(database.get_scoped_session(), session.get(GoogleUser, user_id))
     return None if is_complete else user_id
 
 

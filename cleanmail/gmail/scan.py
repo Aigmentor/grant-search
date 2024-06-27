@@ -117,6 +117,7 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
             session.commit()
         return thread
     except Exception as e:
+        session.remove()
         logging.exception(f"Error processing thread {thread_id}: {e}")
 
 
@@ -202,40 +203,6 @@ def scan(
     return scanning_all_remaining
 
 
-def compute_sender_stats(session: Session, user: GoogleUser):
-    senders = session.query(GmailSender).filter_by(user_id=user.id).all()
-    senders_with_stats = []
-    for sender in senders:
-        threads = (
-            session.query(GmailThread)
-            .filter_by(user_id=user.id, sender=sender.id)
-            .all()
-        )
-        email_count = len(threads)
-        # Senders can have 0 threads if all their emails were deleted
-        if email_count == 0:
-            continue
-        replied = 0
-        unread = 0
-        important = 0
-        for thread in threads:
-            if thread.has_replied:
-                replied += 1
-            if not thread.is_read:
-                unread += 1
-            if "IMPORTANT" in thread.labels:
-                important += 1
-        senders_with_stats.append((sender, email_count, unread, replied, important))
-
-    senders_with_stats.sort(key=lambda x: x[1], reverse=True)
-    for stats in senders_with_stats[0:200]:
-        percent_read = 100.0 - (stats[2] * 100.0 / stats[1])
-        logging.info(
-            f"Sender: {stats[0].name} ({stats[0].email}) {stats[1]} read: {percent_read}% replied: {stats[3]} important: {stats[4]}"
-        )
-    return senders_with_stats
-
-
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     parser = argparse.ArgumentParser(description="Prints stats for a user's emails")
@@ -267,5 +234,3 @@ if __name__ == "__main__":
             args.sample,
             max_items=args.sample * 5 if args.debug else None,
         )
-
-    compute_sender_stats(session, user)
