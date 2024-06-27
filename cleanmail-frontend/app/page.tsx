@@ -4,6 +4,7 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./components/login";
+import Button from "./components/button";
   
 export default function Home() : React.ReactElement {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
@@ -86,20 +87,11 @@ export default function Home() : React.ReactElement {
   return <div>
     {getStatusBlock()}
     <br/>
-
-    <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" onClick={logout}>Logout</button>
+    <Button onClick={logout}>Logout</Button>
     <div>&nbsp;</div>
     <div>
-    <button
-      disabled={scanDisabled}
-      onClick={sendScan}
-      className={`px-4 py-2 text-white font-bold ${scanDisabled ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700'}`}
-    >
-  Scan Email
-</button>
-    
-      {/* <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" disabled={scanDisabled} onClick={sendScan}>Scan Emails</button> */}
-      </div>
+      <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button>
+    </div>
     
   </div>
   return (
