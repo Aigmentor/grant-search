@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 # Fewer threads in production. It's closer to DB and so hits gmail api much faster
 # with fewer threads
 MAX_PROCESS_EMAIL_THREADS = (
-    10 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 20
+    8 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 20
 )
 
 sender_lock = threading.Lock()
