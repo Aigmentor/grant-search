@@ -23,7 +23,9 @@ def login_required(f):
         if not is_logged_in:
             return jsonify({"error": "Not logged in"}), 400
         session = get_session()
-        user = db.GoogleUser.get_or_create(session, get_username())
+        user = db.GoogleUser.get_or_create(
+            session, get_username(), oauth.serialize_credentials(credentials)
+        )
         return f(user, credentials, session, *args, **kwargs)
 
     return decorated_function
@@ -37,20 +39,22 @@ def auth():
 
 
 @api.route("/status")
-def handle_status():
-    credentials = oauth.get_credentials_from_flask_session()
+@login_required
+def handle_status(user, credentials, session):
     is_logged_in = credentials is not None and not credentials.expired
     if not is_logged_in:
         return jsonify({"error": "Not logged in"}), 400
-    db_session = get_session()
-    user = db.GoogleUser.get_or_create(
-        db_session, get_username(), oauth.serialize_credentials(credentials)
+    return jsonify(
+        {
+            "status": user.status.status,
+            "statusData": user.status.data,
+            "email": user.email,
+        }
     )
-    return jsonify({"status": user.status.status, "email": user.email})
 
 
+@api.route("/scan_email", methods=["POST"])
 @login_required
-@api.route("/scan_email")
 def analyze_email(user, credentials, session):
     queue_scan_email_task(user)
     return jsonify({"status": "success", "email": user.email})

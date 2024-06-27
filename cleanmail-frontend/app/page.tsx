@@ -4,10 +4,12 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./components/login";
-
+  
 export default function Home() : React.ReactElement {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
   const [status, setStatus] = useState<Map<String, any>>(undefined);
+  const [scanDisabled, setScanDisabled] = useState<boolean>(false);
+
   useEffect(() => {
     axios.get("/api/auth").then((res) => {
       setIsLoggedIn(res.data.isLoggedIn);
@@ -19,6 +21,29 @@ export default function Home() : React.ReactElement {
       })
     });
   }, []);
+
+  useEffect(() => {
+    // Function to fetch authentication status
+    const fetchStatus = () => {
+      axios.get("/api/status").then((res) => {
+        setStatus(res.data);
+        const { status } = res.data;
+        if (status === 'scanned') {
+          setScanDisabled(false);
+        }
+      });
+    };
+
+    if (scanDisabled) {
+      // Set up the interval to call the XHR every X seconds
+      const intervalId = setInterval(() => {
+        fetchStatus();
+      }, 4000); 
+      // Clear the interval when the component unmounts
+      return () => clearInterval(intervalId);
+    }   
+  }, [scanDisabled]);
+
 
   if (isLoggedIn === undefined) {
     return <div>Loading...</div>;
@@ -34,10 +59,40 @@ export default function Home() : React.ReactElement {
     });
   }
 
+  const sendScan = () => {
+    setScanDisabled(true);
+    axios.post("/api/scan_email").then(() => {
+    });
+  }
+  const getStatusBlock = () => {
+    const header =  <h1>Welcome to CleanMail {status && `, ${status['email']}`}</h1>
+    if (!status) {
+      return header;
+    }
+    const userLine =
+      <p>Current User: {status['email']} ({status['status']})</p>
+   
+    return <div>
+        {header}
+        {userLine}
+        {status['statusData'] &&
+          <pre>
+          {JSON.stringify(status['statusData'], null, 2)}
+          </pre>
+        }
+        </div>
+  };
+        
   return <div>
-    <h1>Welcome to CleanMail {status && `, ${status['email']}`}</h1>
-    <p> {status && `Current User Status: ${status['status']}`}</p>
+    {getStatusBlock()}
+    <br/>
+
     <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" onClick={logout}>Logout</button>
+    <div>&nbsp;</div>
+    <div>
+      <button className="bg-gray-800 hover:bg-grey-500 text-white font-bold py-2 px-4 rounded" disabled={scanDisabled} onClick={sendScan}>Scan Emails</button>
+      </div>
+    
   </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">

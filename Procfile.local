@@ -1,1 +1,2 @@
 web: flask --app cleanmail.web.app:app --debug run
+worker: python -m cleanmail.worker.dispatcher

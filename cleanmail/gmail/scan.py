@@ -126,7 +126,7 @@ def scan(
     # First check what we've already scanned
     count = session.query(GmailThread).filter_by(user_id=user.id).count()
     logging.info(f"Already scanned {count} emails for user {user.email}")
-
+    user_id = user.id
     # oldest_email = (
     #     session.query(GmailThread)
     #     .filter_by(user_id=user.id)
@@ -145,6 +145,9 @@ def scan(
     #     return
 
     # Scan 50x as many emails, then subsample.
+    status = user.status
+    status.status = "scanning"
+    session.commit()
     start_time = datetime.datetime.now()
     message_ids = list_thread_ids_by_query_in_parallel(
         user.get_google_credentials(), ""
@@ -170,10 +173,18 @@ def scan(
                 logging.info(
                     f"Processed {i+1} messages in {time_elapsed.total_seconds()}s: {(i+1.0)/time_elapsed.total_seconds()} messages/s"
                 )
+                status.data = {
+                    "email_count": session.query(GmailThread)
+                    .filter_by(user_id=user_id)
+                    .count(),
+                }
+                session.commit()
 
-    user.status.data = {
+    status.status = "scanned"
+
+    status.data = {
         "last_scan": datetime.datetime.now().isoformat(),
-        "email_count": session.query(GmailThread).filter_by(user_id=user.id).count(),
+        "email_count": session.query(GmailThread).filter_by(user_id=user_id).count(),
     }
     session.commit()
 
