@@ -14,7 +14,6 @@ logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
 class CustomFilter(logging.Filter):
     def filter(self, record):
-        print(f"logger called for {record}")
         return not record.getMessage().startswith("Refreshing credentials")
 
 
