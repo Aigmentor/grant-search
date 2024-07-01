@@ -430,6 +430,21 @@ def get_or_create_label_id(service, label_name) -> str:
     return _create_label(service, label_name)
 
 
+def add_label(service, thread_id: str, label_id: str):
+    commands = {"addLabelIds": [label_id], "removeLabelIds": []}
+    try:
+        response = (
+            service.users()
+            .threads()
+            .modify(userId="me", id=thread_id, body=commands)
+            .execute()
+        )
+        return True
+    except HttpError as e:
+        logging.error(f"Error adding label to thread: {e}")
+        return False
+
+
 # TODO: There is an issue where if the Gmail thread has multiple messages, this only remove the inbox label
 # from the latest message, so the thread stays in the inbox.
 # def archive_email(credentials: Credentials, user_id: str, email_id: str) -> bool:

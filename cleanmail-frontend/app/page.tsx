@@ -75,12 +75,9 @@ export default function Home() : React.ReactElement {
     if (!status) {
       return header;
     }
-    const userLine =
-      <p>Current User: {status['email']} ({status['status']})</p>
    
     return <div>
         {header}
-        {userLine}
         {status['statusData'] &&
           <pre>
           {JSON.stringify(status['statusData'], null, 2)}
@@ -89,17 +86,19 @@ export default function Home() : React.ReactElement {
         </div>
   };
         
-  return <div>
+  const onDelete = (ids: string[]) => {
+    axios.post("/api/delete_senders", {senders: ids}).then(
+      (response) => console.log()
+    )
+  };
+
+return <div>
     {getStatusBlock()}
     <br/>
-    <Button onClick={logout}>Logout</Button>
-    <div>&nbsp;</div>
-    <div>
-      <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button>
-    </div>
-    
+    <Button onClick={logout}>Logout</Button> &nbsp; <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button>
+    <br/>   
     <br/>
-    <SenderStats stats={stats}/>
+    <SenderStats stats={stats} onDelete={onDelete}/>
   </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Table } from 'antd';
 import { ColumnType } from 'antd/es/table/interface';
+import Button from './button';
 
 interface DataType {
     key: React.Key;
@@ -20,9 +21,12 @@ export const getSenderStats = async () => {
 }
 export type Props = {
     stats: any;
+    onDelete: (ids: string[]) => void;
 };
 
-export default function SenderStats({stats}: Props) : React.ReactElement {
+export default function SenderStats({stats, onDelete}: Props) : React.ReactElement {
+    const [selectedRowKeys, setSelectedRowKeys] = React.useState([]);
+
     const columns: ColumnType<DataType>[] = [
     {
         title: 'Importance',
@@ -105,11 +109,28 @@ export default function SenderStats({stats}: Props) : React.ReactElement {
     }
   ];
  
+
+  const rowSelection = {
+    onChange: (newSelectedRowKeys, selectedRows) => {
+      console.log('Selected row keys: ', newSelectedRowKeys);
+      console.log('Selected rows: ', selectedRows);
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    selectedRowKeys, // This ensures the selected rows are controlled by state
+  };
+
+  const callDelete = () => {
+    console.log('Delete', selectedRowKeys);
+    onDelete(selectedRowKeys);
+  }
   // Render the Table component with the columns and data defined
   return <div>
     {/* {!isLoading && getThresholds(stats['thresholds'])} */}
+    <Button onClick={callDelete}>Delete</Button> {/* Step 2: Add Button */}
     <Table
         columns={columns}
+        rowKey="id"
+        rowSelection={rowSelection}
         dataSource={stats && stats['senders']}
         pagination={{ pageSize: 40 }}
         loading={stats === undefined}

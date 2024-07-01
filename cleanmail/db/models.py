@@ -140,6 +140,8 @@ class GmailThread(Base):
     # Commas separated list of all labels on thead
     labels = Column(String)
 
+    deleted = Column(Boolean)
+
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("GoogleUser", back_populates="threads")
 

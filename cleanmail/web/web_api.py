@@ -1,13 +1,13 @@
 from functools import wraps
 import logging
-from flask import Blueprint, jsonify, session
+from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
 from google.auth.transport.requests import Request
 
 from cleanmail.db.database import get_session
 import cleanmail.web.oauth as oauth
 import cleanmail.db.models as db
-from cleanmail.worker.dispatcher import queue_scan_email_task
+from cleanmail.worker.dispatcher import queue_scan_email_task, queue_delete_sender
 
 # XHR API for web app
 api = Blueprint("api", __name__)
@@ -69,7 +69,6 @@ def handle_status(user, credentials, session):
 @api.route("/sender_stats")
 @login_required
 def sender_stats(user, credentials, session):
-    print("here1")
     senders = (
         session.query(db.GmailSender)
         .filter(db.GmailSender.user_id == user.id)
@@ -95,6 +94,7 @@ def sender_stats(user, credentials, session):
         return jsonify({})
     sender_stats = [
         {
+            "id": sender.id,
             "name": sender.name,
             "email": sender.email,
             "emailsSent": sender.emails_sent,
@@ -113,6 +113,20 @@ def sender_stats(user, credentials, session):
         for sender in senders
     ]
     return jsonify({"senders": sender_stats})
+
+
+@api.route("/delete_senders", methods=["POST"])
+@login_required
+def delete_senders(user, credentials, session):
+    senders = request.json.get("senders")
+    logging.info("Deleting senders: %s", senders)
+    for sender in senders:
+        sender = session.get(db.GmailSender, sender)
+        if sender is not None:
+            logging.info("Deleting sender: %s", sender.email)
+        queue_delete_sender(user, sender)
+
+    return jsonify({"status": "success"})
 
 
 @api.route("/scan_email", methods=["POST"])
