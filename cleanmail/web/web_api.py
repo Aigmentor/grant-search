@@ -2,7 +2,7 @@ from functools import wraps
 import logging
 from flask import Blueprint, jsonify, session
 from sqlalchemy import desc
-
+from google.auth.transport.requests import Request
 
 from cleanmail.db.database import get_session
 import cleanmail.web.oauth as oauth
@@ -37,6 +37,16 @@ def login_required(f):
 def auth():
     credentials = oauth.get_credentials_from_flask_session()
     is_logged_in = credentials is not None and not credentials.expired
+    if is_logged_in:
+        try:
+            # Attempt to refresh the credentials if possible
+            credentials.refresh(Request())
+
+        except Exception as e:
+            # Handle the exception (e.g., token is revoked or network issues)
+            print(f"Error refreshing credentials: {e}")
+            is_logged_in = False
+
     return jsonify({"isLoggedIn": is_logged_in})
 
 
