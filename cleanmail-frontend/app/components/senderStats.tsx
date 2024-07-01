@@ -1,7 +1,18 @@
 
 import React from 'react';
 import { Table } from 'antd';
+import { ColumnType } from 'antd/es/table/interface';
 
+interface DataType {
+    key: React.Key;
+    name: string;
+    email: string;
+    importanceScore: number;
+    repliedFraction: number;
+    valueProp: number;
+    emailsSent: number;
+  }
+  
 export const getSenderStats = async () => {
   const response = await fetch('/api/sender_stats');
   const data = await response.json();
@@ -12,7 +23,7 @@ export type Props = {
 };
 
 export default function SenderStats({stats}: Props) : React.ReactElement {
-  const columns = [
+    const columns: ColumnType<DataType>[] = [
     {
         title: 'Importance',
         dataIndex: 'importanceScore',
@@ -29,8 +40,8 @@ export default function SenderStats({stats}: Props) : React.ReactElement {
         render: (valueProp) => {
             return `${ (valueProp).toFixed(3)}`
         },
-        defaultSortOrder: 'descend',
         sorter: (a, b) => a.valueProp - b.valueProp,
+        defaultSortOrder: 'descend',
       },
     {
       title: 'Sender Name',
