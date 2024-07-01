@@ -96,7 +96,7 @@ def scan_users():
 
 
 if __name__ == "__main__":
-    logging.error("Starting worker")
+    logging.info("Starting worker")
     parser = argparse.ArgumentParser(
         description="Queue worker for Processing background tasks"
     )

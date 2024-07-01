@@ -5,11 +5,13 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./components/login";
 import Button from "./components/button";
+import SenderStats, { getSenderStats } from "./components/senderStats";
   
 export default function Home() : React.ReactElement {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
   const [status, setStatus] = useState<Map<String, any>>(undefined);
   const [scanDisabled, setScanDisabled] = useState<boolean>(false);
+  const [stats, setStats] = React.useState({senders:undefined});
 
   useEffect(() => {
     axios.get("/api/auth").then((res) => {
@@ -20,6 +22,9 @@ export default function Home() : React.ReactElement {
       axios.get("/api/status").then((res) => {
         setStatus(res.data);
       })
+      getSenderStats().then((data) => {
+        setStats(data);
+      });
     });
   }, []);
 
@@ -93,6 +98,8 @@ export default function Home() : React.ReactElement {
       <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button>
     </div>
     
+    <br/>
+    <SenderStats stats={stats}/>
   </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">

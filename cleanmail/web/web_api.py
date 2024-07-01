@@ -1,6 +1,7 @@
 from functools import wraps
 import logging
 from flask import Blueprint, jsonify, session
+from sqlalchemy import desc
 
 
 from cleanmail.db.database import get_session
@@ -53,6 +54,55 @@ def handle_status(user, credentials, session):
             "email": user.email,
         }
     )
+
+
+@api.route("/sender_stats")
+@login_required
+def sender_stats(user, credentials, session):
+    print("here1")
+    senders = (
+        session.query(db.GmailSender)
+        .filter(db.GmailSender.user_id == user.id)
+        .filter(db.GmailSender.emails_sent > 0)
+        .order_by(desc(db.GmailSender.emails_sent))
+        .all()
+    )
+    totals = [sender.emails_sent for sender in senders]
+    total_emails = sum(totals)
+    running_sum = []
+    current_sum = 0
+    threshold_index = None
+    # Compute the 80% threshold index- how many senders make up 80% of the emails
+    for num in totals:
+        current_sum += num
+        running_sum.append(current_sum)
+        if threshold_index is None and current_sum > total_emails * 0.8:
+            threshold_index = len(running_sum)
+
+    senders = senders[:threshold_index]
+
+    if total_emails == 0:
+        return jsonify({})
+    sender_stats = [
+        {
+            "name": sender.name,
+            "email": sender.email,
+            "emailsSent": sender.emails_sent,
+            "percentOfEmails": sender.emails_sent * 100.0 / total_emails,
+            "emailsUnread": sender.emails_unread,
+            "emailsImportant": sender.emails_important,
+            "emailsReplied": sender.emails_replied,
+            "readFraction": sender.read_fraction(),
+            "repliedFraction": sender.replied_fraction(),
+            "importantFraction": sender.important_fraction(),
+            "importanceScore": sender.importance_score(),
+            "importantSender": sender.important_fraction() > 0.2
+            or sender.replied_fraction() > 0.05,
+            "valueProp": sender.value_prop(),
+        }
+        for sender in senders
+    ]
+    return jsonify({"senders": sender_stats})
 
 
 @api.route("/scan_email", methods=["POST"])

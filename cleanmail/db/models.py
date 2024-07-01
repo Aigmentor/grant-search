@@ -1,3 +1,4 @@
+import math
 from typing import Type, TypeVar
 from sqlalchemy import (
     JSON,
@@ -93,6 +94,27 @@ class GmailSender(Base):
 
     def important_fraction(self):
         return self.emails_important * 1.0 / self.emails_sent
+
+    def is_personal_domain(self):
+        return (
+            self.email.endswith("gmail.com")
+            or self.email.endswith("yahoo.com")
+            or self.email.endswith("hotmail.com")
+            or self.email.endswith("outlook.com")
+            or self.email.endswith("aol.com")
+        )
+
+    def importance_score(self):
+        return (
+            ((self.read_fraction() + 0.01) ** 0.5)
+            * ((self.replied_fraction() + 0.3) ** 2)
+            * self.important_fraction()
+            * (8.0 if self.is_personal_domain() else 1.0)
+        )
+
+    def value_prop(self):
+        sigmoid = 1 / (1 + math.exp(-self.importance_score() * 100))
+        return (1 - sigmoid) * self.emails_sent
 
     __table_args__ = (Index("idx_gmail_sender_email", user_id, email),)
 
