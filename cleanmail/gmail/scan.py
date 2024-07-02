@@ -207,6 +207,7 @@ def scan(
         }
         return False
     session.commit()
+    logging.info(f"Scanning finished for user: {scanning_all_remaining}")
     return scanning_all_remaining
 
 

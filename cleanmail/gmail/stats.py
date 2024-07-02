@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -25,8 +26,9 @@ def compute_user_status(session: Session, user: GoogleUser):
 
 
 def compute_stats(session: Session, user: GoogleUser):
-    senders = session.query(GmailSender).filter_by(user_id=user.id).all()
-    for sender in senders:
+    logging.info(f"Computing stats for {user.email}")
+    senders = session.query(GmailSender).filter(GmailSender.user_id == user.id).all()
+    for i, sender in enumerate(senders):
         threads = (
             session.query(GmailThread)
             .filter(
@@ -39,7 +41,6 @@ def compute_stats(session: Session, user: GoogleUser):
         email_count = len(threads)
         # Senders can have 0 threads if all their emails were deleted
         if email_count == 0:
-            # session.delete(sender)
             continue
         replied = 0
         unread = 0
@@ -61,3 +62,5 @@ def compute_stats(session: Session, user: GoogleUser):
         sender.emails_unread = unread
         sender.emails_deleted = deleted
         session.commit()
+        if i % 200 == 199:
+            logging.info(f"Computed stats for {i+1} senders")
