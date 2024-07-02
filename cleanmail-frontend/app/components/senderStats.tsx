@@ -38,7 +38,6 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         filters: [
             { text: 'Active', value: "active" },
             { text: 'Cleaned', value: "cleaned" },
-            // { text: 'All', value: "All" },
           ],
           onFilter: (value, record) => {
             if (value == "All") {
