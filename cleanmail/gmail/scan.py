@@ -54,13 +54,11 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
                             header_line = header["value"]
                             match = re.search(pattern, header_line)
                             if match:
-                                from_email = match.group("email") or match.group(
-                                    "email_only"
+                                from_email = (
+                                    match.group("email")
+                                    or match.group("email_only").lower()
                                 )
                                 name = match.group("name") or from_email
-                                # print(
-                                #     f"parsed {header_line} to name: '{name}', email: '{from_email}'"
-                                # )
                             else:
                                 print(f"Failed to match: {headers}")
 
