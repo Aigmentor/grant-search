@@ -34,89 +34,89 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
         if message is None:
             logging.warn(f"Failed to get message for thread_id: {thread_id}")
             return
-        session = get_scoped_session()
-        labels = set()
-        max_date = None
-        thread_size = len(message["messages"])
-        from_email = None
-        name = None
-        for message in message["messages"]:
-            # Some weird emails don't have any labels
-            if "labelIds" in message:
-                for label in message["labelIds"]:
-                    labels.add(label)
-            headers = message["payload"]["headers"]
-            pattern = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
-            for header in headers:
-                if header["name"] == "From":
-                    if from_email is None:
-                        # Only use the sender on first email in thread
-                        header_line = header["value"]
-                        match = re.search(pattern, header_line)
-                        if match:
-                            from_email = match.group("email") or match.group(
-                                "email_only"
-                            )
-                            name = match.group("name") or from_email
-                            # print(
-                            #     f"parsed {header_line} to name: '{name}', email: '{from_email}'"
-                            # )
-                        else:
-                            print(f"Failed to match: {headers}")
+        with get_scoped_session() as session:
+            labels = set()
+            max_date = None
+            thread_size = len(message["messages"])
+            from_email = None
+            name = None
+            for message in message["messages"]:
+                # Some weird emails don't have any labels
+                if "labelIds" in message:
+                    for label in message["labelIds"]:
+                        labels.add(label)
+                headers = message["payload"]["headers"]
+                pattern = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
+                for header in headers:
+                    if header["name"] == "From":
+                        if from_email is None:
+                            # Only use the sender on first email in thread
+                            header_line = header["value"]
+                            match = re.search(pattern, header_line)
+                            if match:
+                                from_email = match.group("email") or match.group(
+                                    "email_only"
+                                )
+                                name = match.group("name") or from_email
+                                # print(
+                                #     f"parsed {header_line} to name: '{name}', email: '{from_email}'"
+                                # )
+                            else:
+                                print(f"Failed to match: {headers}")
 
-            date = int(message["internalDate"])
-            if max_date is None or date > max_date:
-                max_date = date
+                date = int(message["internalDate"])
+                if max_date is None or date > max_date:
+                    max_date = date
 
-        if name is None:
-            print(f"Failed to find From header in: {headers}")
-            return
+            if name is None:
+                print(f"Failed to find From header in: {headers}")
+                return
 
-        if max_date is not None:
-            max_date = datetime.datetime.fromtimestamp(max_date / 1000)
+            if max_date is not None:
+                max_date = datetime.datetime.fromtimestamp(max_date / 1000)
 
-        replied = "SENT" in labels
-        is_unread = "UNREAD" in labels
-        is_important = "IMPORTANT" in labels
-        is_deleted = DELETED_LABEL in labels
-        thread = session.query(GmailThread).filter_by(thread_id=thread_id).first()
-        if thread is not None:
-            pass
-        else:
-            sender_id = sender_cache[user_id].get(from_email)
-            if sender_id is None:
-                # Grab the lock, check again for sender, then create if necessary
-                with sender_lock:
-                    sender = (
-                        session.query(GmailSender)
-                        .filter_by(user_id=user_id, email=from_email)
-                        .first()
-                    )
-                    if sender is None:
-                        logging.info(f"Creating new sender: {name} {from_email}")
-                        sender = GmailSender(
-                            user_id=user_id, name=name, email=from_email
+            replied = "SENT" in labels
+            is_unread = "UNREAD" in labels
+            is_important = "IMPORTANT" in labels
+            is_deleted = DELETED_LABEL in labels
+            thread = session.query(GmailThread).filter_by(thread_id=thread_id).first()
+            if thread is not None:
+                pass
+            else:
+                sender_id = sender_cache[user_id].get(from_email)
+                if sender_id is None:
+                    # Grab the lock, check again for sender, then create if necessary
+                    with sender_lock:
+                        sender = (
+                            session.query(GmailSender)
+                            .filter_by(user_id=user_id, email=from_email)
+                            .first()
                         )
-                        session.add(sender)
-                        session.commit()
-                    sender_id = sender.id
-                    sender_cache[user_id][from_email] = sender_id
+                        if sender is None:
+                            logging.info(f"Creating new sender: {name} {from_email}")
+                            sender = GmailSender(
+                                user_id=user_id, name=name, email=from_email
+                            )
+                            session.add(sender)
+                            session.commit()
+                        sender_id = sender.id
+                        sender_cache[user_id][from_email] = sender_id
 
-            thread = GmailThread(
-                thread_id=thread_id,
-                user_id=user_id,
-                is_read=not is_unread,
-                sender=sender_id,
-                has_replied=replied,
-                is_singleton=thread_size == 1,
-                is_important=is_important,
-                deleted=is_deleted,
-                most_recent_date=max_date,
-                labels=",".join(labels),
-            )
-            session.add(thread)
-            session.commit()
-        return thread
+                thread = GmailThread(
+                    thread_id=thread_id,
+                    user_id=user_id,
+                    is_read=not is_unread,
+                    sender=sender_id,
+                    has_replied=replied,
+                    is_singleton=thread_size == 1,
+                    is_important=is_important,
+                    deleted=is_deleted,
+                    most_recent_date=max_date,
+                    labels=",".join(labels),
+                )
+                session.add(thread)
+                session.commit()
+            return thread
     except Exception as e:
         logging.exception(f"Error processing thread {thread_id}: {e}")
 
@@ -179,7 +179,7 @@ def scan(
                     )
                     status.data = {
                         "email_count": session.query(GmailThread)
-                        .filter_by(user_id=user_id)
+                        .filter(GmailThread.user_id == user_id)
                         .count(),
                     }
                     session.commit()
@@ -188,7 +188,7 @@ def scan(
         status.data = {
             "last_scan": datetime.datetime.now().isoformat(),
             "email_count": session.query(GmailThread)
-            .filter_by(user_id=user_id)
+            .filter(GmailThread.user_id == user_id)
             .count(),
         }
     except Exception as e:

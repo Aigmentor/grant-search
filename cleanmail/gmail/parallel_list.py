@@ -6,7 +6,7 @@ from time import sleep
 from typing import List
 
 from cleanmail import common
-from cleanmail.gmail.api import _exec_with_rate_limit, list_thread_ids_by_query
+from cleanmail.gmail.api import exec_with_rate_limit, list_thread_ids_by_query
 
 MAX_PROCESS_EMAIL_THREADS = (
     7 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 10
@@ -56,7 +56,7 @@ def list_thread_ids_by_query_in_parallel(
                     (
                         after_time,
                         executor.submit(
-                            _exec_with_rate_limit,
+                            exec_with_rate_limit,
                             list_thread_ids_by_query,
                             credentials,
                             time_query,

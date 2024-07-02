@@ -18,8 +18,10 @@ def delete_thread(session, service, thread, label_id):
         logging.info(f"Thread {thread.thread_id} already deleted")
         return
     logging.info(f"Deleting thread: {thread.thread_id}")
-    gmail_api.add_label(service, thread.thread_id, label_id)
-    # gmail_api.delete_thread(service, thread.thread_id)
+
+    gmail_api.exec_with_rate_limit(
+        gmail_api.add_label, service, thread.thread_id, label_id
+    )
     thread.deleted = True
     session.commit()
 
@@ -81,7 +83,7 @@ def clean_email_for_user(user_id: int):
             and status.cleaning_start
             > datetime.datetime.now() - datetime.timedelta(seconds=7200)
         ):
-            logging.error(f"User {user.email} is being scanned already")
+            logging.error(f"User {user.email} is being cleaned already")
             return
         status.is_cleaning = True
         status.cleaning_start = datetime.datetime.now()
@@ -110,6 +112,13 @@ def clean_email_for_user(user_id: int):
             new_session = get_session()
             new_user = session.get(GoogleUser, user_id)
             new_user.status.is_cleaning = False
+            status_json = new_user.status.data
+            deleted_count = (
+                session.query(GmailThread)
+                .filter(GmailThread.user_id == user_id, GmailThread.deleted == True)
+                .count()
+            )
+            status_json["deleted_emails"] = deleted_count
             new_session.commit()
 
         logging.info(f"Finished cleaning email for user {user.email}")

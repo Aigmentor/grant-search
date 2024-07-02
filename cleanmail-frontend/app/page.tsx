@@ -88,8 +88,11 @@ export default function Home() : React.ReactElement {
         
   const onDelete = (ids: string[]) => {
     axios.post("/api/delete_senders", {senders: ids}).then(
-      (response) => console.log()
-    )
+      (response) => {
+        getSenderStats().then((data) => {
+        setStats(data);
+        });
+      });    
   };
 
 return <div>

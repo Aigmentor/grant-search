@@ -97,6 +97,7 @@ def sender_stats(user, credentials, session):
             "id": sender.id,
             "name": sender.name,
             "email": sender.email,
+            "shouldBeCleaned": sender.should_be_cleaned or False,
             "emailsSent": sender.emails_sent,
             "percentOfEmails": sender.emails_sent * 100.0 / total_emails,
             "emailsUnread": sender.emails_unread,

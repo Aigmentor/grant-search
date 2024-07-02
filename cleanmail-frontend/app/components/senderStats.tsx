@@ -29,6 +29,25 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
 
     const columns: ColumnType<DataType>[] = [
     {
+        title: 'Cleaned',
+        dataIndex: 'shouldBeCleaned',
+        key: 'shouldBeCleaned',
+        render: (shouldBeCleaned) => {
+            return (shouldBeCleaned ? 'cleaned' : '');
+        },
+        filters: [
+            { text: 'Active', value: "active" },
+            { text: 'Cleaned', value: "cleaned" },
+            // { text: 'All', value: "All" },
+          ],
+          onFilter: (value, record) => {
+            if (value == "All") {
+                return true;
+            }
+            return record['shouldBeCleaned'] === (value === "cleaned");
+        },
+    },  
+    {
         title: 'Importance',
         dataIndex: 'importanceScore',
         key: 'importanceScore',

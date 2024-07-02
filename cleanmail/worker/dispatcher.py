@@ -108,6 +108,15 @@ def scan_users():
             logging.info(f"Remaining users to scan: {len(user_ids)}")
 
 
+def reset_clean_status():
+    logging.info("Resetting clean status")
+    session = database.get_session()
+    users = session.query(GoogleUser).all()
+    for user in users:
+        user.status.is_cleaning = False
+    session.commit()
+
+
 if __name__ == "__main__":
     logging.info("Starting worker")
     parser = argparse.ArgumentParser(
@@ -115,4 +124,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     threading.Thread(target=scan_users).start()
+    reset_clean_status()
     _consume_queue()

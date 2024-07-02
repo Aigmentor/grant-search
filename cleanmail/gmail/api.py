@@ -29,7 +29,7 @@ MAX_THREADS = 3
 rate_limit_date = datetime.datetime.now()
 
 
-def _exec_with_rate_limit(func: callable, *args, **kwargs):
+def exec_with_rate_limit(func: callable, *args, **kwargs):
     global rate_limit_date
     for i in range(5):
         try:
@@ -208,7 +208,7 @@ def list_messages_by_message_id(credentials, messages: list, max_items: int) -> 
 
 
 def get_thread_by_id(credentials, thread_id: str) -> dict:
-    return _exec_with_rate_limit(
+    return exec_with_rate_limit(
         get_latest_message_by_gthread_id_on_thread, credentials, thread_id
     )
 
@@ -432,17 +432,13 @@ def get_or_create_label_id(service, label_name) -> str:
 
 def add_label(service, thread_id: str, label_id: str):
     commands = {"addLabelIds": [label_id], "removeLabelIds": []}
-    try:
-        response = (
-            service.users()
-            .threads()
-            .modify(userId="me", id=thread_id, body=commands)
-            .execute()
-        )
-        return True
-    except HttpError as e:
-        logging.error(f"Error adding label to thread: {e}")
-        return False
+    response = (
+        service.users()
+        .threads()
+        .modify(userId="me", id=thread_id, body=commands)
+        .execute()
+    )
+    return True
 
 
 # TODO: There is an issue where if the Gmail thread has multiple messages, this only remove the inbox label
