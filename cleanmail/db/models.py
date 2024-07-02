@@ -76,6 +76,19 @@ class GoogleUser(Base):
         return user
 
 
+_PERSONAL_DOMAINS = set(
+    [
+        "gmail.com",
+        "yahoo.com",
+        "hotmail.com",
+        "outlook.com",
+        "aol.com",
+        "msn.com",
+        "icloud.com",
+    ]
+)
+
+
 class GmailSender(Base):
     __tablename__ = "gmail_sender"
     id = Column(Integer, primary_key=True)
@@ -103,13 +116,8 @@ class GmailSender(Base):
         return self.emails_important * 1.0 / self.emails_sent
 
     def is_personal_domain(self):
-        return (
-            self.email.endswith("gmail.com")
-            or self.email.endswith("yahoo.com")
-            or self.email.endswith("hotmail.com")
-            or self.email.endswith("outlook.com")
-            or self.email.endswith("aol.com")
-        )
+        domain = self.email.split("@")[1] if "@" in self.email else self.email
+        return domain in _PERSONAL_DOMAINS
 
     def importance_score(self):
         return (

@@ -112,6 +112,7 @@ def sender_stats(user, credentials, session):
             "importantSender": sender.important_fraction() > 0.2
             or sender.replied_fraction() > 0.05,
             "valueProp": sender.value_prop(),
+            "personalDomain": sender.is_personal_domain(),
         }
         for sender in senders
     ]

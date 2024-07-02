@@ -85,6 +85,14 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         return <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(email)}`} target="_blank" rel="noopener noreferrer"> {emailText}</a>
       },
       sorter: (a, b) => a.email.localeCompare(b.email),
+      filters: [
+        { text: 'Show Personal Domains', value: false},
+        { text: 'Hide Personal Domains', value: true},
+      ],
+      defaultFilteredValue: [true],
+      onFilter: (value, record) => {
+        return !value || !record['personalDomain']
+    },
     },
     {
       title: 'Email Count',
