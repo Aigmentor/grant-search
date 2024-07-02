@@ -24,7 +24,7 @@ MAX_PROCESS_EMAIL_THREADS = (
 
 sender_lock = threading.Lock()
 
-# Maps from user_id to a dictionary of email to sender.id
+# Maps from user_id to a dictionary of email+Name to sender.id
 sender_cache = defaultdict(dict)
 
 
@@ -83,13 +83,19 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
             if thread is not None:
                 pass
             else:
-                sender_id = sender_cache[user_id].get(from_email)
+                sender_id = sender_cache[user_id].get(
+                    from_email, sender_cache[user_id].get(name)
+                )
                 if sender_id is None:
                     # Grab the lock, check again for sender, then create if necessary
                     with sender_lock:
                         sender = (
                             session.query(GmailSender)
                             .filter_by(user_id=user_id, email=from_email)
+                            .first()
+                        ) or (
+                            session.query(GmailSender)
+                            .filter_by(user_id=user_id, name=name)
                             .first()
                         )
                         if sender is None:
@@ -101,6 +107,7 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
                             session.commit()
                         sender_id = sender.id
                         sender_cache[user_id][from_email] = sender_id
+                        sender_cache[user_id][name] = sender_id
 
                 thread = GmailThread(
                     thread_id=thread_id,
