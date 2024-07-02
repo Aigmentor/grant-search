@@ -65,7 +65,15 @@ class GoogleUser(Base):
         cls: Type[T], session: Session, email: str, serialized_credentials: str
     ) -> T:
         email = email.lower().strip()
-        user = session.query(GoogleUser).filter(GoogleUser.email == email).first()
+        # Hit the cache first, but if no user shows up try an uncached query
+        user = (
+            session.query(GoogleUser).filter(GoogleUser.email == email).first()
+            or session.query(GoogleUser)
+            .filter(GoogleUser.email == email)
+            .populate_existing()
+            .first()
+        )
+
         if user is None:
             user = GoogleUser(email=email, credentials=serialized_credentials)
             session.add(user)
