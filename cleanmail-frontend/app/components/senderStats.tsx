@@ -155,7 +155,7 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         pagination={{ pageSize: 40 }}
         loading={stats === undefined}
         // rowClassName={(record) => (record.importantSender ? 'important-row' : '')}
-        />;
+        />
     </div>
 };
 
