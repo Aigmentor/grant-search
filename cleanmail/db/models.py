@@ -47,13 +47,15 @@ T = TypeVar("T", bound="GoogleUser")
 class GoogleUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    email = Column(String)
+    email = Column(String, unique=True)
     name = Column(String)
     credentials = Column(String)
     status = relationship("UserStatus", back_populates="user", uselist=False)
     threads = relationship("GmailThread", back_populates="user")
     senders = relationship("GmailSender", back_populates="user")
     total_email_count = Column(Integer)
+
+    __table_args__ = (Index("idx_google_user_email", email),)
 
     def get_google_credentials(self):
         return oauth.deserialize_credentials(self.credentials)
@@ -62,7 +64,8 @@ class GoogleUser(Base):
     def get_or_create(
         cls: Type[T], session: Session, email: str, serialized_credentials: str
     ) -> T:
-        user = session.query(GoogleUser).filter_by(email=email).first()
+        email = email.lower().strip()
+        user = session.query(GoogleUser).filter(GoogleUser.email == email).first()
         if user is None:
             user = GoogleUser(email=email, credentials=serialized_credentials)
             session.add(user)
