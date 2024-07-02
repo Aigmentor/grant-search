@@ -48,7 +48,7 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
                 headers = message["payload"]["headers"]
                 pattern = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
                 for header in headers:
-                    if headers["name"].lower() == "from":
+                    if header["name"].lower() == "from":
                         if from_email is None:
                             # Only use the sender on first email in thread
                             header_line = header["value"]
