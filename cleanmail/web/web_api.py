@@ -5,6 +5,7 @@ from sqlalchemy import desc
 from google.auth.transport.requests import Request
 
 from cleanmail.db.database import get_session
+from cleanmail.gmail.stats import compute_user_status
 import cleanmail.web.oauth as oauth
 import cleanmail.db.models as db
 from cleanmail.worker.dispatcher import queue_scan_email_task, queue_clean_email_task
@@ -57,6 +58,7 @@ def handle_status(user, credentials, session):
     if not is_logged_in:
         return jsonify({"error": "Not logged in"}), 400
     logging.info(f"User: {user.email} {user.status}")
+    compute_user_status(session, user)
     return jsonify(
         {
             "status": user.status.status,

@@ -14,6 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
+from sqlalchemy.ext.mutable import MutableDict
 
 import cleanmail.db.database as database
 import cleanmail.web.oauth as oauth
@@ -32,7 +33,7 @@ class UserStatus(Base):
         Integer, ForeignKey("users.id")
     )  # ForeignKey reference to GoogleUser's id
     status = Column(String)
-    data = Column(JSON)
+    data = Column(MutableDict.as_mutable(JSON))
     user = relationship(
         "GoogleUser", back_populates="status", uselist=False
     )  # uselist=False for one-to-one

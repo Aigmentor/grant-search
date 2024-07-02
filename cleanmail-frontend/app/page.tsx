@@ -28,28 +28,6 @@ export default function Home() : React.ReactElement {
     });
   }, []);
 
-  useEffect(() => {
-    // Function to fetch authentication status
-    const fetchStatus = () => {
-      axios.get("/api/status").then((res) => {
-        setStatus(res.data);
-        const { status } = res.data;
-        if (status === 'scanned') {
-          setScanDisabled(false);
-        }
-      });
-    };
-
-    if (scanDisabled) {
-      // Set up the interval to call the XHR every X seconds
-      const intervalId = setInterval(() => {
-        fetchStatus();
-      }, 4000); 
-      // Clear the interval when the component unmounts
-      return () => clearInterval(intervalId);
-    }   
-  }, [scanDisabled]);
-
 
   if (isLoggedIn === undefined) {
     return <div>Loading...</div>;
@@ -85,7 +63,13 @@ export default function Home() : React.ReactElement {
         }
         </div>
   };
-        
+  
+  const refreshStatus = () => {
+    axios.get("/api/status").then((res) => {
+      setStatus(res.data);
+    })
+  };
+
   const onDelete = (ids: string[]) => {
     axios.post("/api/delete_senders", {senders: ids}).then(
       (response) => {
@@ -98,7 +82,10 @@ export default function Home() : React.ReactElement {
 return <div>
     {getStatusBlock()}
     <br/>
-    <Button onClick={logout}>Logout</Button> &nbsp; <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button>
+    <Button onClick={logout}>Logout</Button> &nbsp;
+     <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button> &nbsp;
+     <Button onClick={refreshStatus}> Refresh Status </Button>
+     
     <br/>   
     <br/>
     <SenderStats stats={stats} onDelete={onDelete}/>
