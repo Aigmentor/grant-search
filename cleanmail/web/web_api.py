@@ -7,7 +7,7 @@ from google.auth.transport.requests import Request
 from cleanmail.db.database import get_session
 import cleanmail.web.oauth as oauth
 import cleanmail.db.models as db
-from cleanmail.worker.dispatcher import queue_scan_email_task, queue_delete_sender
+from cleanmail.worker.dispatcher import queue_scan_email_task, queue_clean_email_task
 
 # XHR API for web app
 api = Blueprint("api", __name__)
@@ -124,8 +124,9 @@ def delete_senders(user, credentials, session):
         sender = session.get(db.GmailSender, sender)
         if sender is not None:
             logging.info("Deleting sender: %s", sender.email)
-        queue_delete_sender(user, sender)
-
+            sender.should_be_cleaned = True
+    session.commit()
+    queue_clean_email_task(user)
     return jsonify({"status": "success"})
 
 

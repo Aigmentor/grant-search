@@ -14,6 +14,8 @@ from cleanmail.gmail import api as gmail_api
 from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
 from sqlalchemy.orm import Session
 
+from cleanmail.gmail.clean_user import DELETED_LABEL
+
 # Fewer threads in production. It's closer to DB and so hits gmail api much faster
 # with fewer threads
 MAX_PROCESS_EMAIL_THREADS = (
@@ -76,9 +78,7 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
         replied = "SENT" in labels
         is_unread = "UNREAD" in labels
         is_important = "IMPORTANT" in labels
-        # logging.info(
-        #     f"unread: {is_unread} important: {is_important} size: {thread_size} replied: {replied } from: {from_email} date: {max_date}"
-        # )
+        is_deleted = DELETED_LABEL in labels
         thread = session.query(GmailThread).filter_by(thread_id=thread_id).first()
         if thread is not None:
             pass
@@ -110,6 +110,7 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
                 has_replied=replied,
                 is_singleton=thread_size == 1,
                 is_important=is_important,
+                deleted=is_deleted,
                 most_recent_date=max_date,
                 labels=",".join(labels),
             )
@@ -117,7 +118,6 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
             session.commit()
         return thread
     except Exception as e:
-        session.remove()
         logging.exception(f"Error processing thread {thread_id}: {e}")
 
 

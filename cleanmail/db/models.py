@@ -36,6 +36,8 @@ class UserStatus(Base):
     user = relationship(
         "GoogleUser", back_populates="status", uselist=False
     )  # uselist=False for one-to-one
+    is_cleaning = Column(Boolean)
+    cleaning_start = Column(DateTime)
 
 
 T = TypeVar("T", bound="GoogleUser")
@@ -85,6 +87,10 @@ class GmailSender(Base):
     emails_unread = Column(Integer)
     emails_important = Column(Integer)
     emails_replied = Column(Integer)
+    emails_deleted = Column(Integer)
+
+    should_be_cleaned = Column(Boolean)
+    last_cleaned = Column(DateTime)
 
     def read_fraction(self):
         return 1 - (self.emails_unread * 1.0 / self.emails_sent)

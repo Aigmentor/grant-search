@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 from cleanmail.gmail.stats import compute_stats
-from cleanmail.tests.gmail.delete_sender import delete_sender
+from cleanmail.gmail.clean_user import clean_email_for_user
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -27,21 +27,15 @@ _MESSAGE_TYPE = "worker_task"
 
 class _TASK_ENUM:
     SCAN_EMAIL: str = "scan_email"
-    DELETE_SENDER: str = "delete_sender"
+    CLEAN_EMAIL: str = "clean_email"
 
 
 def queue_scan_email_task(user: GoogleUser):
     _send_background_task(_TASK_ENUM.SCAN_EMAIL, {"user_id": user.id})
 
 
-def queue_delete_sender(user: GoogleUser, sender: GmailSender):
-    if user.id != sender.user_id:
-        logging.error(f"User {user.id} cannot delete sender {sender.id}")
-        return
-
-    _send_background_task(
-        _TASK_ENUM.DELETE_SENDER, {"sender_id": sender.id, "user_id": user.id}
-    )
+def queue_clean_email_task(user: GoogleUser):
+    _send_background_task(_TASK_ENUM.CLEAN_EMAIL, {"user_id": user.id})
 
 
 def _send_background_task(task_name: str, spec: dict):
@@ -62,8 +56,8 @@ def _process_scan_email(user_id: int):
     logging.info(f"Finished processing scan email for user {user.email}")
 
 
-def _process_delete_sender(user_id: int, sender_id: int):
-    delete_sender(user_id, sender_id)
+def _process_clean_email(user_id: int):
+    clean_email_for_user(user_id)
 
 
 def _process_queue_entry(queue_spec):
@@ -73,10 +67,9 @@ def _process_queue_entry(queue_spec):
     if task_name == _TASK_ENUM.SCAN_EMAIL:
         user_id = queue_spec.get("user_id")
         _process_scan_email(user_id)
-    elif task_name == _TASK_ENUM.DELETE_SENDER:
+    elif task_name == _TASK_ENUM.CLEAN_EMAIL:
         user_id = queue_spec.get("user_id")
-        sender_id = queue_spec.get("sender_id")
-        _process_delete_sender(user_id, sender_id)
+        _process_clean_email(user_id)
 
 
 def _consume_queue():
