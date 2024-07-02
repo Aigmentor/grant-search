@@ -16,8 +16,10 @@ def compute_user_status(session: Session, user: GoogleUser):
         session.query(GmailThread).filter(GmailThread.user_id == user.id).count()
     )
     status_json["email_count"] = all_email_count
-    status_json["deleted_percent"] = float(
-        f"{deleted_count * 100.0 / all_email_count:.3g}"
+    status_json["deleted_percent"] = (
+        0
+        if all_email_count == 0
+        else float(f"{deleted_count * 100.0 / all_email_count:.3g}")
     )
     session.commit()
 
