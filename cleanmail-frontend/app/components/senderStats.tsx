@@ -83,7 +83,8 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
           emailText = `${email.slice(0, 30)}...`;
         }
         return <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(email)}`} target="_blank" rel="noopener noreferrer"> {emailText}</a>
-      }
+      },
+      sorter: (a, b) => a.email.localeCompare(b.email),
     },
     {
       title: 'Email Count',
