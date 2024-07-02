@@ -1,5 +1,8 @@
+from alembic.config import Config
+from alembic import command
 from cleanmail.db.models import Base
 from cleanmail.db.database import engine, get_session
+
 
 def reset():
 
@@ -18,7 +21,12 @@ def reset():
     # Close the session
     session.close()
 
+    alembic_cfg = Config("alembic.ini")
+
+    # Stamp the database with the latest revision
+    command.stamp(alembic_cfg, "head")
     print("Database reset complete!")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     reset()
