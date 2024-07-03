@@ -100,14 +100,35 @@ _PERSONAL_DOMAINS = set(
 )
 
 
-class GmailSender(Base):
-    __tablename__ = "gmail_sender"
+class GmailSenderAddress(Base):
+    __tablename__ = "gmail_sender_address"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    user = relationship("GoogleUser", back_populates="senders")
+    user = relationship("GoogleUser", uselist=False)
+
+    sender_id = Column(Integer, ForeignKey("gmail_sender.id"))
+    sender = relationship("GmailSender", back_populates="addresses")
 
     email = Column(String)
     name = Column(String)
+    email_count = Column(Integer, default=0)
+
+    __table_args__ = (
+        Index("idx_gmail_sender_address_email", "user_id", "email"),
+        Index("idx_gmail_sender_address_name", "user_id", "name"),
+        Index("idx_gmail_sender_addresses_sender_id", "sender_id"),
+    )
+
+
+class GmailSender(Base):
+    __tablename__ = "gmail_sender"
+    id = Column(Integer, primary_key=True)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("GoogleUser", uselist=False)
+    addresses = relationship("GmailSenderAddress", back_populates="sender")
+    threads = relationship("GmailThread", back_populates="sender")
+
     emails_sent = Column(Integer)
     emails_unread = Column(Integer)
     emails_important = Column(Integer)
@@ -116,6 +137,9 @@ class GmailSender(Base):
 
     should_be_cleaned = Column(Boolean)
     last_cleaned = Column(DateTime)
+
+    def get_primary_address(self) -> GmailSenderAddress:
+        return max(self.addresses, key=lambda x: x.email_count)
 
     def read_fraction(self):
         return 1 - (self.emails_unread * 1.0 / self.emails_sent)
@@ -127,8 +151,13 @@ class GmailSender(Base):
         return self.emails_important * 1.0 / self.emails_sent
 
     def is_personal_domain(self):
-        domain = self.email.split("@")[1] if "@" in self.email else self.email
-        return domain in _PERSONAL_DOMAINS
+        for address in self.addresses:
+            domain = (
+                address.email.split("@")[1] if "@" in address.email else address.email
+            )
+            if domain in _PERSONAL_DOMAINS:
+                return True
+        return False
 
     def importance_score(self):
         return (
@@ -142,7 +171,7 @@ class GmailSender(Base):
         sigmoid = 1 / (1 + math.exp(-self.importance_score() * 100))
         return (1 - sigmoid) * self.emails_sent
 
-    __table_args__ = (Index("idx_gmail_sender_email", user_id, email),)
+    __table_args__ = (Index("idx_gmail_sender_user_id", "user_id"),)
 
 
 class GmailThread(Base):
@@ -154,7 +183,12 @@ class GmailThread(Base):
     is_read = Column(Boolean)
 
     most_recent_date = Column(DateTime)
-    sender = Column(Integer, ForeignKey("gmail_sender.id"))
+
+    sender_id = Column(Integer, ForeignKey("gmail_sender.id"))
+    sender = relationship("GmailSender", back_populates="threads", uselist=False)
+
+    sender_address_id = Column(Integer, ForeignKey("gmail_sender_address.id"))
+    sender_address = relationship("GmailSenderAddress", uselist=False)
 
     # True if user has replied to any messages
     has_replied = Column(Boolean)
@@ -174,9 +208,9 @@ class GmailThread(Base):
     __table_args__ = (
         Index(
             "idx_gmail_thread_most_recent_is_read",
-            user_id,
+            "user_id",
             asc("most_recent_date"),
             "is_read",
         ),
-        Index("idx_gmail_thread_sender", user_id, sender),
+        Index("idx_gmail_thread_sender", "user_id", "sender_id"),
     )

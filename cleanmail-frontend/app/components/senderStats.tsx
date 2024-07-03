@@ -66,22 +66,16 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         defaultSortOrder: 'descend',
       },
     {
-      title: 'Sender Name',
-      dataIndex: 'name', // Field name in the data object
-      key: 'name', // Unique key for each column
-    },
-    {
-      title: 'Email Address',
+      title: 'Sender',
       dataIndex: 'email',
       key: 'email',
-      render: (email) => {
-        var emailText = email;
-        // Check if the email length is greater than 30 characters
-        if (email.length > 30) {
-          // If so, truncate to 30 characters and add ellipses
-          emailText = `${email.slice(0, 30)}...`;
+      render: (email, row) => {
+        const name = row['name'];
+        if (name == email) {
+            return email;
         }
-        return <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(email)}`} target="_blank" rel="noopener noreferrer"> {emailText}</a>
+        const value = `${name} <${email.slice(0, 30)}>`;
+        return <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(email)}`} target="_blank" rel="noopener noreferrer"> {value}</a>
       },
       sorter: (a, b) => a.email.localeCompare(b.email),
       filters: [
@@ -161,6 +155,16 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         dataSource={stats && stats['senders']}
         pagination={{ pageSize: 40 }}
         loading={stats === undefined}
+        expandable={{
+            expandedRowRender: record => (
+              <ul>
+                {record['addresses'].map((address, index) => (
+                  <li key={index}>{`${address["name"]} <${address["email"]}>: ${address["emailCount"]}`}</li>
+                ))}
+              </ul>
+            ),
+            rowExpandable: record => record['addresses'] && record['addresses'].length > 1
+          }}
         // rowClassName={(record) => (record.importantSender ? 'important-row' : '')}
         />
     </div>

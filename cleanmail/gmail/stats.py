@@ -33,7 +33,7 @@ def compute_stats(session: Session, user: GoogleUser):
             session.query(GmailThread)
             .filter(
                 GmailThread.user_id == user.id,
-                GmailThread.sender == sender.id,
+                GmailThread.sender_id == sender.id,
                 or_(GmailThread.deleted.is_(None), GmailThread.deleted == False),
             )
             .all()
@@ -55,6 +55,7 @@ def compute_stats(session: Session, user: GoogleUser):
                 important += 1
             if thread.deleted:
                 deleted += 1
+            thread.sender_address.email_count += 1
 
         sender.emails_sent = email_count
         sender.emails_important = important

@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Optional
 
+from cleanmail import common
 from cleanmail.gmail.stats import compute_stats
 from cleanmail.gmail.clean_user import clean_email_for_user
 
@@ -90,7 +91,11 @@ def scan_user(user_id: int) -> Optional[GoogleUser]:
     session = database.get_scoped_session()
     user = session.get(GoogleUser, user_id)
     logging.info(f"Scanning user {user.email}")
-    is_complete = scan.scan(session, user, 10000)
+    is_complete = scan.scan(
+        session,
+        user,
+        10000 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 500,
+    )
     compute_stats(database.get_scoped_session(), session.get(GoogleUser, user_id))
     return None if is_complete else user_id
 

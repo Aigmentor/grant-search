@@ -2,6 +2,7 @@ from functools import wraps
 import logging
 from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 from google.auth.transport.requests import Request
 
 from cleanmail.db.database import get_session
@@ -73,6 +74,8 @@ def handle_status(user, credentials, session):
 def sender_stats(user, credentials, session):
     senders = (
         session.query(db.GmailSender)
+        # Load the addresses for each sender- otherwise we'll make a separate query for each sender
+        .options(joinedload(db.GmailSender.addresses))
         .filter(db.GmailSender.user_id == user.id)
         .filter(db.GmailSender.emails_sent > 0)
         .order_by(desc(db.GmailSender.emails_sent))
@@ -94,11 +97,20 @@ def sender_stats(user, credentials, session):
 
     if total_emails == 0:
         return jsonify({})
+
     sender_stats = [
         {
+            "addresses": [
+                {
+                    "name": address.name,
+                    "email": address.email,
+                    "emailCount": address.email_count,
+                }
+                for address in sender.addresses
+            ],
             "id": sender.id,
-            "name": sender.name,
-            "email": sender.email,
+            "name": sender.get_primary_address().name,
+            "email": sender.get_primary_address().email,
             "shouldBeCleaned": sender.should_be_cleaned or False,
             "emailsSent": sender.emails_sent,
             "percentOfEmails": sender.emails_sent * 100.0 / total_emails,

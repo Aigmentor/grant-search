@@ -9,26 +9,109 @@ import sys
 import threading
 from cleanmail import common
 from cleanmail.db.database import get_scoped_session, get_session
-from cleanmail.db.models import GmailSender, GoogleUser, GmailThread
+from cleanmail.db.models import GmailSender, GmailSenderAddress, GoogleUser, GmailThread
 from cleanmail.gmail import api as gmail_api
 from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from cleanmail.gmail.clean_user import DELETED_LABEL
 
 # Fewer threads in production. It's closer to DB and so hits gmail api much faster
 # with fewer threads
 MAX_PROCESS_EMAIL_THREADS = (
-    5 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 20
+    6 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 20
 )
 
 sender_lock = threading.Lock()
 
-# Maps from user_id to a dictionary of email+Name to sender.id
+# Maps from user_id to a dictionary of email_Name to sender.id
 sender_cache = defaultdict(dict)
 
 
-def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str):
+def _find_sender_address(session, user_id: str, email: str, name: str):
+    return (
+        session.query(GmailSenderAddress)
+        .filter(
+            GmailSenderAddress.user_id == user_id,
+            or_(GmailSenderAddress.email == email, GmailSenderAddress.name == name),
+        )
+        .all()
+    )
+
+
+def _get_sender_address(
+    session, cache: dict, user_id: str, email: str, name: str
+) -> GmailSenderAddress:
+    cache_key = f"{user_id}_{email}"
+    sender_address = cache.get(cache_key)
+    if sender_address is not None:
+        return sender_address
+    sender_lock.acquire()
+    try:
+        sender = None
+        # First try to find in DB by email or name
+        sender_addresses = _find_sender_address(session, user_id, email, name)
+
+        if len(sender_addresses) == 0:
+            # Need to create a new Sender- no matches on either name or email
+            sender = GmailSender(user_id=user_id)
+            session.add(sender)
+            session.commit()
+
+        exact_sender_address = None
+        for sender_address in sender_addresses:
+            if sender_address.email == email and sender_address.name == name:
+                exact_sender_address = sender_address
+                break
+
+        if exact_sender_address is None:
+            if len(sender_addresses) > 0:
+                sender = sender_addresses[0].sender
+            else:
+                # Sender already created
+                assert sender is not None
+
+            exact_sender_address = GmailSenderAddress(
+                user_id=user_id, name=name, email=email, sender_id=sender.id
+            )
+
+            session.add(exact_sender_address)
+            session.commit()
+
+        cache[cache_key] = (exact_sender_address.sender_id, exact_sender_address.id)
+    finally:
+        sender_lock.release()
+
+    return exact_sender_address.sender_id, exact_sender_address.id
+
+
+_EMAIL_HEADER_PATTERN = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
+
+
+def extract_sender_from_headers(headers):
+    from_email = None
+    name = None
+    for header in headers:
+        if header["name"].lower() == "from":
+            if from_email is None:
+                # Only use the sender on first email in thread
+                header_line = header["value"]
+                match = re.search(_EMAIL_HEADER_PATTERN, header_line)
+                if match:
+                    from_email = (
+                        match.group("email") or match.group("email_only").lower()
+                    )
+                    name = match.group("name") or from_email
+                    return from_email, name
+                else:
+                    print(f"Failed to match: {headers}")
+    return None, None
+
+
+def _process_thread_by_id(
+    user_google_credentials, sender_cache: dict, user_id: str, thread_id: str
+):
     try:
         message = gmail_api.get_thread_by_id(user_google_credentials, thread_id)
         if message is None:
@@ -46,21 +129,8 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
                     for label in message["labelIds"]:
                         labels.add(label)
                 headers = message["payload"]["headers"]
-                pattern = r"(?:(?P<name>.+?)\s+)?(?:<(?P<email>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>)|(?P<email_only>[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)"
-                for header in headers:
-                    if header["name"].lower() == "from":
-                        if from_email is None:
-                            # Only use the sender on first email in thread
-                            header_line = header["value"]
-                            match = re.search(pattern, header_line)
-                            if match:
-                                from_email = (
-                                    match.group("email")
-                                    or match.group("email_only").lower()
-                                )
-                                name = match.group("name") or from_email
-                            else:
-                                print(f"Failed to match: {headers}")
+                if (from_email is None or name is None) and headers:
+                    from_email, name = extract_sender_from_headers(headers)
 
                 date = int(message["internalDate"])
                 if max_date is None or date > max_date:
@@ -81,37 +151,15 @@ def _process_thread_by_id(user_google_credentials, user_id: str, thread_id: str)
             if thread is not None:
                 pass
             else:
-                sender_id = sender_cache[user_id].get(
-                    from_email, sender_cache[user_id].get(name)
+                sender_id, sender_address_id = _get_sender_address(
+                    session, sender_cache, user_id, from_email, name
                 )
-                if sender_id is None:
-                    # Grab the lock, check again for sender, then create if necessary
-                    with sender_lock:
-                        sender = (
-                            session.query(GmailSender)
-                            .filter_by(user_id=user_id, email=from_email)
-                            .first()
-                        ) or (
-                            session.query(GmailSender)
-                            .filter_by(user_id=user_id, name=name)
-                            .first()
-                        )
-                        if sender is None:
-                            logging.info(f"Creating new sender: {name} {from_email}")
-                            sender = GmailSender(
-                                user_id=user_id, name=name, email=from_email
-                            )
-                            session.add(sender)
-                            session.commit()
-                        sender_id = sender.id
-                        sender_cache[user_id][from_email] = sender_id
-                        sender_cache[user_id][name] = sender_id
-
                 thread = GmailThread(
                     thread_id=thread_id,
                     user_id=user_id,
                     is_read=not is_unread,
-                    sender=sender_id,
+                    sender_id=sender_id,
+                    sender_address_id=sender_address_id,
                     has_replied=replied,
                     is_singleton=thread_size == 1,
                     is_important=is_important,
@@ -169,11 +217,14 @@ def scan(
         if len(message_ids) > sample:
             message_ids = random.sample(message_ids, sample)
             scanning_all_remaining = False
+        sender_cache = dict()
 
         start_time = datetime.datetime.now()
         with ThreadPoolExecutor(max_workers=MAX_PROCESS_EMAIL_THREADS) as executor:
             results = executor.map(
-                lambda msg: _process_thread_by_id(user_credentials, user_id, msg["id"]),
+                lambda msg: _process_thread_by_id(
+                    user_credentials, sender_cache, user_id, msg["id"]
+                ),
                 message_ids,
             )
             for i, result in enumerate(results):
