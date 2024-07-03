@@ -31,6 +31,7 @@ rate_limit_date = datetime.datetime.now()
 
 def exec_with_rate_limit(func: callable, *args, **kwargs):
     global rate_limit_date
+    delay = 4.0
     for i in range(5):
         try:
             if datetime.datetime.now() < rate_limit_date:
@@ -43,7 +44,7 @@ def exec_with_rate_limit(func: callable, *args, **kwargs):
             return func(*args, **kwargs)
         except HttpError as e:
             if e.resp.status == 403 and i < 4:
-                delay = (i + 3) * 10
+                delay = delay * 1.5
                 logging.info("Rate limit hit, waiting %s seconds", delay)
                 rate_limit_date = datetime.datetime.now() + datetime.timedelta(
                     seconds=delay
