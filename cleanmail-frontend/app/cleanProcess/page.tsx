@@ -2,9 +2,15 @@
 
 import React from "react";
 import { DataType, EMAIL_COUNT_COLUMN, IMPORTANCE_COLUMN, IMPORTANCE_PERCENT_COLUMN, renderAddresses, REPLIED_PERCENT, SENDER_COLUMN, VALUE_PROP_COLUMN } from "../components/statsColumns";
-import { Button, Table } from "antd";
+import { Button, Progress, Table } from "antd";
 import axios from "axios";
 
+interface userStatus {
+    emailCount: number;
+    deletedEmails: number;
+    toBeDeletedEmails: number;
+    percentToBeDeleted: number;
+}
 
 const getNextSenderBatch = async () => {
     const response = await fetch('/api/sender_batch');
@@ -14,13 +20,33 @@ const getNextSenderBatch = async () => {
 export default function Home() : React.ReactElement {
     const [stats, setStats] = React.useState({senders:undefined});
     const [processing, setProcessing] = React.useState(false);
+    const [status, setStatus] = React.useState<userStatus>(undefined);
     
     const header = <h1>Welcome to CleanMail</h1>
+    const emailStats = status && <div>
+        <Progress percent={Number(status['percentToBeDeleted'].toFixed(1))} />
+
+    </div>
 
     const updateStats = React.useCallback(() => { 
         getNextSenderBatch().then((data) => {
             setStats(data);
             setProcessing(false);
+            axios.get("/api/status").then(({data}) => {
+                const {
+                    emailCount,
+                    deletedEmails,
+                    toBeDeletedEmails,            
+                } = data;
+                const percentToBeDeleted = ((toBeDeletedEmails + deletedEmails) * 100.0/ emailCount);
+                console.log('Percent to be deleted', percentToBeDeleted, emailCount, deletedEmails, toBeDeletedEmails)
+                setStatus({
+                    emailCount,
+                    deletedEmails,
+                    toBeDeletedEmails,
+                    percentToBeDeleted
+                });
+            });    
           });
     }, []);
 
@@ -49,6 +75,7 @@ export default function Home() : React.ReactElement {
 
     return <div>
         {header}
+        {emailStats}
         <SenderTable senders={stats['senders']} processing={processing} onSplit={onSplit} onAction={onAction}/>
         <Button.Group>
             <Button disabled={processing} type="primary" onClick={() => processBatch('clean')}>Clean</Button>

@@ -41,6 +41,9 @@ class UserStatus(Base):
     )  # uselist=False for one-to-one
     is_cleaning = Column(Boolean)
     cleaning_start = Column(DateTime)
+    email_count = Column(Integer)
+    deleted_emails = Column(Integer)
+    to_be_deleted_emails = Column(Integer)
 
 
 T = TypeVar("T", bound="GoogleUser")

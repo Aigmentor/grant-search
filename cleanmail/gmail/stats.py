@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from cleanmail.db.models import GmailSender, GmailThread, GoogleUser
+from cleanmail.db.models import GmailSender, GmailThread, GoogleUser, SenderStatus
 
 
 def compute_user_status(session: Session, user: GoogleUser):
@@ -12,15 +12,20 @@ def compute_user_status(session: Session, user: GoogleUser):
         .filter(GmailThread.user_id == user.id, GmailThread.deleted == True)
         .count()
     )
-    status_json["deleted_emails"] = deleted_count
-    all_email_count = (
+    user.status.deleted_emails = deleted_count
+    user.status.email_count = (
         session.query(GmailThread).filter(GmailThread.user_id == user.id).count()
     )
-    status_json["email_count"] = all_email_count
-    status_json["deleted_percent"] = (
-        0
-        if all_email_count == 0
-        else float(f"{deleted_count * 100.0 / all_email_count:.3g}")
+    user.status.to_be_deleted_emails = (
+        session.query(GmailThread)
+        .join(GmailSender)
+        .filter(
+            GmailThread.user_id == user.id,
+            GmailSender.user_id == user.id,
+            GmailSender.status == SenderStatus.CLEAN,
+            GmailThread.deleted == False,
+        )
+        .count()
     )
     session.commit()
 

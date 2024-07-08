@@ -1,11 +1,12 @@
 from functools import wraps
 import logging
+from threading import Thread
 from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
 from sqlalchemy.orm import joinedload
 from google.auth.transport.requests import Request
 
-from cleanmail.db.database import get_session
+from cleanmail.db.database import get_scoped_session, get_session
 import cleanmail.gmail.scan as scan
 from cleanmail.gmail.stats import compute_user_status
 import cleanmail.web.oauth as oauth
@@ -63,9 +64,12 @@ def handle_status(user, credentials, session):
     compute_user_status(session, user)
     return jsonify(
         {
+            "email": user.email,
             "status": user.status.status,
             "statusData": user.status.data,
-            "email": user.email,
+            "emailCount": user.status.email_count,
+            "deletedEmails": user.status.deleted_emails,
+            "toBeDeletedEmails": user.status.to_be_deleted_emails,
         }
     )
 
@@ -158,6 +162,15 @@ def stats_for_senders(senders, use_threshold=True):
     return jsonify({"senders": sender_stats})
 
 
+def background_compute_user_status(user_id):
+    with get_scoped_session() as session:
+        user = session.get(db.GoogleUser, user_id)
+        if user is None:
+            logging.error(f"User {user_id} not found")
+            return
+        compute_user_status(session, user)
+
+
 @api.route("/update_senders", methods=["POST"])
 @login_required
 def update_senders(user, credentials, session):
@@ -170,6 +183,7 @@ def update_senders(user, credentials, session):
             sender.status = db.SenderStatus[action.upper()]
     session.commit()
     queue_clean_email_task(user)
+    Thread(target=background_compute_user_status, args=[user.id]).start()
     return jsonify({"status": "success"})
 
 
