@@ -7,10 +7,12 @@ import random
 import re
 import sys
 import threading
+from typing import Optional
 from cleanmail import common
 from cleanmail.db.database import get_scoped_session, get_session
 from cleanmail.db.models import GmailSender, GmailSenderAddress, GoogleUser, GmailThread
 from cleanmail.gmail import api as gmail_api
+from cleanmail.gmail import stats
 from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -107,6 +109,61 @@ def extract_sender_from_headers(headers):
                 else:
                     print(f"Failed to match: {headers}")
     return None, None
+
+
+def create_thread(session, user_id, thread_id, gmail_thread):
+    labels = set()
+    max_date = None
+    thread_size = len(gmail_thread["messages"])
+    from_email = None
+    name = None
+    for message in message["messages"]:
+        # Some weird emails don't have any labels
+        if "labelIds" in message:
+            for label in message["labelIds"]:
+                labels.add(label)
+        headers = message["payload"]["headers"]
+        if (from_email is None or name is None) and headers:
+            from_email, name = extract_sender_from_headers(headers)
+
+        date = int(message["internalDate"])
+        if max_date is None or date > max_date:
+            max_date = date
+
+    if name is None:
+        print(f"Failed to find From header in: {headers}")
+        return
+
+    if max_date is not None:
+        max_date = datetime.datetime.fromtimestamp(max_date / 1000)
+
+    replied = "SENT" in labels
+    is_unread = "UNREAD" in labels
+    is_important = "IMPORTANT" in labels
+    is_deleted = DELETED_LABEL in labels
+    thread = session.query(GmailThread).filter_by(thread_id=thread_id).first()
+    if thread is not None:
+        pass
+    else:
+        sender_id, sender_address_id = _get_sender_address(
+            session, sender_cache, user_id, from_email, name
+        )
+        thread = GmailThread(
+            thread_id=thread_id,
+            user_id=user_id,
+            is_read=not is_unread,
+            sender_id=sender_id,
+            sender_address_id=sender_address_id,
+            has_replied=replied,
+            is_singleton=thread_size == 1,
+            is_important=is_important,
+            deleted=is_deleted,
+            most_recent_date=max_date,
+            labels=",".join(labels),
+        )
+        session.add(thread)
+
+        session.commit()
 
 
 def _process_thread_by_id(
@@ -291,3 +348,57 @@ if __name__ == "__main__":
             args.sample,
             max_items=args.sample * 5 if args.debug else None,
         )
+
+
+def split_address(session, address: GmailSenderAddress) -> Optional[GmailSenderAddress]:
+    sender = address.sender
+    other_addresses = sender.addresses
+
+    if len(other_addresses) == 1:
+        logging.warn(f"Cannot split sender with only one address: {sender}")
+        return None
+
+    new_sender = GmailSender(user_id=sender.user_id)
+    session.add(new_sender)
+    session.commit()
+    new_address = GmailSenderAddress(
+        user_id=address.user_id,
+        sender_id=new_sender.id,
+        name=address.name,
+        email=address.email,
+    )
+
+    session.add(new_address)
+    session.commit()
+    threads = (
+        session.query(GmailThread)
+        .filter(
+            GmailThread.user_id == sender.user_id,
+            GmailThread.sender_address_id == address.id,
+        )
+        .all()
+    )
+
+    for thread in threads:
+        thread.sender_id = new_sender.id
+        thread.sender_address_id = new_address.id
+
+    session.commit()
+    # Do this twice, b/c it's possible that new emails were added while we were moving
+    threads = (
+        session.query(GmailThread)
+        .filter(
+            GmailThread.user_id == sender.user_id,
+            GmailThread.sender_address_id == address.id,
+        )
+        .all()
+    )
+    for thread in threads:
+        thread.sender_id = new_sender.id
+        thread.sender_address_id = new_address.id
+
+    session.delete(address)
+    session.commit()
+    stats.compute_stats_for_sender(session, sender)
+    stats.compute_stats_for_sender(session, new_sender)
+    return new_address

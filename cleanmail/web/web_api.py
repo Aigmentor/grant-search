@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from google.auth.transport.requests import Request
 
 from cleanmail.db.database import get_session
+import cleanmail.gmail.scan as scan
 from cleanmail.gmail.stats import compute_user_status
 import cleanmail.web.oauth as oauth
 import cleanmail.db.models as db
@@ -105,6 +106,7 @@ def sender_stats(user, credentials, session):
                     "name": address.name,
                     "email": address.email,
                     "emailCount": address.email_count,
+                    "id": address.id,
                 }
                 for address in sender.addresses
             ],
@@ -157,3 +159,21 @@ def analyze_email(user, credentials, session):
 def logout():
     session.clear()
     return jsonify({"status": "success"})
+
+
+@api.route("/split_address", methods=["POST"])
+@login_required
+def split_address(user, credentials, session):
+    address_id = request.json.get("address")
+    logging.info("Splitting address: %s", address_id)
+    address = session.get(db.GmailSenderAddress, address_id)
+    if address is None or address.user_id != user.id:
+        return jsonify({"error": "Address not found"}), 400
+
+    new_address = scan.split_address(session, address)
+    return jsonify(
+        {
+            "status": "success" if new_address else "failure",
+            "newAddress": new_address.id,
+        }
+    )

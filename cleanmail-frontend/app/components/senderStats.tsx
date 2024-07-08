@@ -1,8 +1,7 @@
 
 import React from 'react';
-import { Table } from 'antd';
+import { Table, Button, Row, Col } from 'antd';
 import { ColumnType } from 'antd/es/table/interface';
-import Button from './button';
 
 interface DataType {
     key: React.Key;
@@ -22,9 +21,10 @@ export const getSenderStats = async () => {
 export type Props = {
     stats: any;
     onDelete: (ids: string[]) => void;
+    onSplit: (address_id: string) => void;
 };
 
-export default function SenderStats({stats, onDelete}: Props) : React.ReactElement {
+export default function SenderStats({stats, onDelete, onSplit}: Props) : React.ReactElement {
     const [selectedRowKeys, setSelectedRowKeys] = React.useState([]);
 
     const columns: ColumnType<DataType>[] = [
@@ -144,10 +144,31 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
     console.log('Delete', selectedRowKeys);
     onDelete(selectedRowKeys);
   }
+  const renderAddresses = (row) : React.ReactElement => {
+    const addresses = row['addresses'];
+    return <>
+        <Row gutter={10}>
+        <Col span={2}></Col>
+        <Col span={8}>Address</Col>
+        <Col span={2}>Email Count</Col>
+        </Row>
+        {addresses.map((address, index) => (
+            <Row key={index} gutter={10}>
+                <Col span={2}>
+                    <Button onClick={() => onSplit(address['id'])}>Split</Button>
+                </Col>
+                <Col span={8}>{`${address["name"]} <`}
+                     <a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(address["email"])}`} target="_blank" rel="noopener noreferrer"> {address["email"]}</a>
+                    {">"} </Col>
+                <Col span={2}>{address["emailCount"]}</Col>
+            </Row>
+                ))}
+                </>
+  }
   // Render the Table component with the columns and data defined
   return <div>
     {/* {!isLoading && getThresholds(stats['thresholds'])} */}
-    <Button onClick={callDelete}>Delete</Button> {/* Step 2: Add Button */}
+    <Button type="primary" onClick={callDelete}>Delete</Button> {/* Step 2: Add Button */}
     <Table
         columns={columns}
         rowKey="id"
@@ -156,13 +177,7 @@ export default function SenderStats({stats, onDelete}: Props) : React.ReactEleme
         pagination={{ pageSize: 40 }}
         loading={stats === undefined}
         expandable={{
-            expandedRowRender: record => (
-              <ul>
-                {record['addresses'].map((address, index) => (
-                  <li key={index}>{`${address["name"]} <${address["email"]}>: ${address["emailCount"]}`}</li>
-                ))}
-              </ul>
-            ),
+            expandedRowRender: record => (renderAddresses(record)),
             rowExpandable: record => record['addresses'] && record['addresses'].length > 1
           }}
         // rowClassName={(record) => (record.importantSender ? 'important-row' : '')}

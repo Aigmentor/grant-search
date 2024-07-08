@@ -4,7 +4,7 @@ import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./components/login";
-import Button from "./components/button";
+import {Button} from "antd";
 import SenderStats, { getSenderStats } from "./components/senderStats";
   
 export default function Home() : React.ReactElement {
@@ -79,6 +79,15 @@ export default function Home() : React.ReactElement {
       });    
   };
 
+  const onSplit = (address_id: string) => {
+    axios.post("/api/split_address", {address: address_id}).then(
+      (response) => {
+        getSenderStats().then((data) => {
+        setStats(data);
+        });
+      });    
+  }
+
 return <div>
     {getStatusBlock()}
     <br/>
@@ -88,7 +97,7 @@ return <div>
      
     <br/>   
     <br/>
-    <SenderStats stats={stats} onDelete={onDelete}/>
+    <SenderStats stats={stats} onDelete={onDelete} onSplit={onSplit}/>
   </div>
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
