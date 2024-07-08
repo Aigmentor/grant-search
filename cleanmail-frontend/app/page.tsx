@@ -1,11 +1,11 @@
 'use client';
 
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import Login from "./components/login";
 import {Button} from "antd";
 import SenderStats, { getSenderStats } from "./components/senderStats";
+import Login from "./components/login";
+import Link from "next/link";
   
 export default function Home() : React.ReactElement {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(undefined);
@@ -93,7 +93,10 @@ return <div>
     <br/>
     <Button onClick={logout}>Logout</Button> &nbsp;
      <Button onClick={sendScan} disabled={scanDisabled}> Scan Email </Button> &nbsp;
-     <Button onClick={refreshStatus}> Refresh Status </Button>
+     <Button onClick={refreshStatus}> Refresh Status </Button> &nbsp;
+     <Link href="/cleanProcess">
+      <Button> Clean Process </Button>
+     </Link>
      
     <br/>   
     <br/>

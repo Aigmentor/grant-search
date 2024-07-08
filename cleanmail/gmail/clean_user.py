@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import datetime
 import logging
 from typing import List
-from cleanmail.db.models import GmailSender, GmailThread, GoogleUser
+from cleanmail.db.models import GmailSender, GmailThread, GoogleUser, SenderStatus
 from cleanmail.db.database import get_scoped_session, get_scoped_session, get_session
 import cleanmail.gmail.api as gmail_api
 from sqlalchemy import or_
@@ -96,7 +96,7 @@ def clean_email_for_user(user_id: int):
                     session.query(GmailSender)
                     .filter(
                         GmailSender.user_id == user_id,
-                        GmailSender.should_be_cleaned == True,
+                        GmailSender.status == SenderStatus.CLEAN,
                     )
                     .all()
                 )

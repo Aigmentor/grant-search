@@ -113,7 +113,7 @@ def sender_stats(user, credentials, session):
             "id": sender.id,
             "name": sender.get_primary_address().name,
             "email": sender.get_primary_address().email,
-            "shouldBeCleaned": sender.should_be_cleaned or False,
+            "shouldBeCleaned": sender.status == db.SenderStatus.CLEAN,
             "emailsSent": sender.emails_sent,
             "percentOfEmails": sender.emails_sent * 100.0 / total_emails,
             "emailsUnread": sender.emails_unread,
@@ -142,7 +142,7 @@ def delete_senders(user, credentials, session):
         sender = session.get(db.GmailSender, sender)
         if sender is not None:
             logging.info("Deleting sender: %s", sender.email)
-            sender.should_be_cleaned = True
+            sender.status = db.SenderStatus.CLEAN
     session.commit()
     queue_clean_email_task(user)
     return jsonify({"status": "success"})

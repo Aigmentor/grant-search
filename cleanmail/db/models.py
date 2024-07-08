@@ -1,3 +1,4 @@
+import enum
 import math
 from typing import Type, TypeVar
 from sqlalchemy import (
@@ -12,6 +13,7 @@ from sqlalchemy import (
     String,
     desc,
 )
+import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.ext.mutable import MutableDict
@@ -120,6 +122,13 @@ class GmailSenderAddress(Base):
     )
 
 
+class SenderStatus(enum.Enum):
+    NONE = "none"
+    CLEAN = "clean"
+    KEEP = "keep"
+    LATER = "later"
+
+
 class GmailSender(Base):
     __tablename__ = "gmail_sender"
     id = Column(Integer, primary_key=True)
@@ -135,7 +144,7 @@ class GmailSender(Base):
     emails_replied = Column(Integer)
     emails_deleted = Column(Integer)
 
-    should_be_cleaned = Column(Boolean)
+    status = Column(sqlalchemy.Enum(SenderStatus), default=SenderStatus.NONE)
     last_cleaned = Column(DateTime)
 
     def get_primary_address(self) -> GmailSenderAddress:
