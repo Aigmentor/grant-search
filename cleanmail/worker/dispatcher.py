@@ -53,7 +53,7 @@ def _process_scan_email(user_id: int):
         return
 
     logging.info(f"Processing scan email for user {user.email}")
-    scan.scan(session, user, 1000)
+    scan.scan(session, user, 10000)
     logging.info(f"Finished processing scan email for user {user.email}")
 
 
