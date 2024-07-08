@@ -70,6 +70,27 @@ def handle_status(user, credentials, session):
     )
 
 
+@api.route("/sender_batch")
+@login_required
+def sender_batch(user, credentials, session):
+    senders = (
+        session.query(db.GmailSender)
+        # Load the addresses for each sender- otherwise we'll make a separate query for each sender
+        .options(joinedload(db.GmailSender.addresses))
+        .filter(db.GmailSender.user_id == user.id)
+        .filter(db.GmailSender.emails_sent > 0)
+        .filter(db.GmailSender.status == db.SenderStatus.NONE)
+        .order_by(desc(db.GmailSender.emails_sent))
+        .all()
+    )
+
+    senders = sorted(senders, key=lambda sender: sender.value_prop(), reverse=True)
+    logging.error("Sending %d senders1", len(senders))
+    senders = senders[:5]
+    logging.error("Sending %d senders2", len(senders))
+    return stats_for_senders(senders, use_threshold=False)
+
+
 @api.route("/sender_stats")
 @login_required
 def sender_stats(user, credentials, session):
@@ -82,6 +103,10 @@ def sender_stats(user, credentials, session):
         .order_by(desc(db.GmailSender.emails_sent))
         .all()
     )
+    return stats_for_senders(senders, use_threshold=True)
+
+
+def stats_for_senders(senders, use_threshold=True):
     totals = [sender.emails_sent for sender in senders]
     total_emails = sum(totals)
     running_sum = []
@@ -93,8 +118,8 @@ def sender_stats(user, credentials, session):
         running_sum.append(current_sum)
         if threshold_index is None and current_sum > total_emails * 0.8:
             threshold_index = len(running_sum)
-
-    senders = senders[:threshold_index]
+    if use_threshold:
+        senders = senders[:threshold_index]
 
     if total_emails == 0:
         return jsonify({})
@@ -133,16 +158,16 @@ def sender_stats(user, credentials, session):
     return jsonify({"senders": sender_stats})
 
 
-@api.route("/delete_senders", methods=["POST"])
+@api.route("/update_senders", methods=["POST"])
 @login_required
-def delete_senders(user, credentials, session):
+def update_senders(user, credentials, session):
     senders = request.json.get("senders")
-    logging.info("Deleting senders: %s", senders)
+    action = request.json.get("action")
+    logging.info(f"Marking as {action}: {senders}")
     for sender in senders:
         sender = session.get(db.GmailSender, sender)
         if sender is not None:
-            logging.info("Deleting sender: %s", sender.email)
-            sender.status = db.SenderStatus.CLEAN
+            sender.status = db.SenderStatus[action.upper()]
     session.commit()
     queue_clean_email_task(user)
     return jsonify({"status": "success"})

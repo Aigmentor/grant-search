@@ -71,7 +71,7 @@ export default function Home() : React.ReactElement {
   };
 
   const onDelete = (ids: string[]) => {
-    axios.post("/api/delete_senders", {senders: ids}).then(
+    axios.post("/api/update_senders", {senders: ids, action: 'clean'}).then(
       (response) => {
         getSenderStats().then((data) => {
         setStats(data);
