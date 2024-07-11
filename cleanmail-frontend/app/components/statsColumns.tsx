@@ -67,6 +67,15 @@ export const VALUE_PROP_COLUMN = {
     defaultSortOrder: 'descend',
 };
 
+export const STATUS_COLUMN = {
+    title: 'Status',
+    dataIndex: 'status',
+    key: 'status',
+    render: (status) => (status === 'none' ? '' : status),
+    sorter: (a, b) => a.status - b.status,
+    defaultSortOrder: 'descend',
+};
+
 export const SENDER_COLUMN =  {
     title: 'Sender',
     dataIndex: 'email',

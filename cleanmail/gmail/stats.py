@@ -1,7 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from cleanmail.db.database import get_scoped_session
 from cleanmail.db.models import GmailSender, GmailThread, GoogleUser, SenderStatus
 
 
@@ -30,7 +32,9 @@ def compute_user_status(session: Session, user: GoogleUser):
     session.commit()
 
 
-def compute_stats_for_sender(session: Session, sender: GmailSender):
+def compute_stats_for_sender(session: Session, sender_id: int):
+    # Load the sender with the new session
+    sender = session.get(GmailSender, sender_id)
     # Reset address email counts to 0
     addresses = sender.addresses
     for address in addresses:
@@ -75,7 +79,9 @@ def compute_stats_for_sender(session: Session, sender: GmailSender):
 def compute_stats(session: Session, user: GoogleUser):
     logging.info(f"Computing stats for {user.email}")
     senders = session.query(GmailSender).filter(GmailSender.user_id == user.id).all()
-    for i, sender in enumerate(senders):
-        compute_stats_for_sender(session, sender)
-        if i % 200 == 199:
-            logging.info(f"Computed stats for {i+1} senders")
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        executor.map(
+            lambda sender: compute_stats_for_sender(get_scoped_session(), sender.id),
+            senders,
+        )

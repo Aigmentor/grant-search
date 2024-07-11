@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Table, Button, Row, Col } from 'antd';
-import { EMAIL_COUNT_COLUMN, IMPORTANCE_COLUMN, IMPORTANCE_PERCENT_COLUMN, READ_PERCENT_COLUMN, REPLIED_PERCENT, SENDER_COLUMN, VALUE_PROP_COLUMN, renderAddresses } from './statsColumns';
+import { EMAIL_COUNT_COLUMN, IMPORTANCE_COLUMN, IMPORTANCE_PERCENT_COLUMN, READ_PERCENT_COLUMN, REPLIED_PERCENT, SENDER_COLUMN, STATUS_COLUMN, VALUE_PROP_COLUMN, renderAddresses } from './statsColumns';
 
   
 export const getSenderStats = async () => {
@@ -32,6 +32,7 @@ export default function SenderStats({stats, cleanProcess, onDelete, onSplit}: Pr
     onDelete(selectedRowKeys);
   }
   const columns = [
+    STATUS_COLUMN,
     IMPORTANCE_COLUMN,
     VALUE_PROP_COLUMN,
     SENDER_COLUMN,

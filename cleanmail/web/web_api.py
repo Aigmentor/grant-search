@@ -150,10 +150,12 @@ def stats_for_senders(senders, use_threshold=True):
             "repliedFraction": sender.replied_fraction(),
             "importantFraction": sender.important_fraction(),
             "importanceScore": sender.importance_score(),
-            "importantSender": sender.important_fraction() > 0.2
-            or sender.replied_fraction() > 0.05,
+            "importantSender": (
+                sender.important_fraction() > 0.2 or sender.replied_fraction() > 0.05,
+            ),
             "valueProp": sender.value_prop(),
             "personalDomain": sender.is_personal_domain(),
+            "status": sender.status.value,
         }
         for sender in senders
     ]
