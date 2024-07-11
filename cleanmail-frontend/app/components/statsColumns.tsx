@@ -1,4 +1,5 @@
 import { Button, Col, Row } from "antd";
+import ButtonGroup from "antd/es/button/button-group";
 
 export interface DataType {
     key: React.Key;
@@ -11,20 +12,31 @@ export interface DataType {
   }
 
 
-export const renderAddresses = (row, onSplit) : React.ReactElement => {
+export const renderAddresses = (row, onSplit: (action: string, sender, address: string) => void) : React.ReactElement => {
     const addresses = row['addresses'];
+    const createButton = (action, address, label) => (
+        <Button 
+            disabled={address['disabled']} 
+            onClick={() => onSplit(action, row, address['id'])}>{label}
+        </Button>
+    )
+
     return <>
         <Row gutter={18}>
-        <Col span={4}></Col>
         <Col span={2}></Col>
+        <Col span={4}></Col>
         <Col span={12}>Address</Col>
         <Col span={2}>Email Count</Col>
         </Row>
         {addresses.map((address, index) => (
-            <Row key={index} gutter={18}>
-                <Col span={4}></Col>
-                <Col span={2}>
-                    <Button onClick={() => onSplit(address['id'])}>Split</Button>
+            <Row key={index} gutter={18} className={address['disabled'] ? "disabledAddress" : ""}>
+                <Col span={2}></Col>
+                <Col span={4}>
+                    <ButtonGroup>
+                        {createButton('keep', address, 'Keep')}
+                        {createButton('clean', address, 'Clean')}
+                        {createButton('split', address, 'Split')}
+                    </ButtonGroup>
                 </Col>
                 <Col span={12}>{`${address["name"]} <`}<a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(address["email"])}`} target="_blank" rel="noopener noreferrer">{address["email"]}</a>
                     {">"} </Col>

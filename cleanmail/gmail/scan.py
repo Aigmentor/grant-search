@@ -10,7 +10,13 @@ import threading
 from typing import Optional
 from cleanmail import common
 from cleanmail.db.database import get_scoped_session, get_session
-from cleanmail.db.models import GmailSender, GmailSenderAddress, GoogleUser, GmailThread
+from cleanmail.db.models import (
+    GmailSender,
+    GmailSenderAddress,
+    GoogleUser,
+    GmailThread,
+    SenderStatus,
+)
 from cleanmail.gmail import api as gmail_api
 from cleanmail.gmail import stats
 from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
@@ -352,7 +358,9 @@ if __name__ == "__main__":
         )
 
 
-def split_address(session, address: GmailSenderAddress) -> Optional[GmailSenderAddress]:
+def split_address(
+    session, address: GmailSenderAddress, address_action: SenderStatus
+) -> Optional[GmailSenderAddress]:
     sender = address.sender
     other_addresses = sender.addresses
 
@@ -360,7 +368,7 @@ def split_address(session, address: GmailSenderAddress) -> Optional[GmailSenderA
         logging.warn(f"Cannot split sender with only one address: {sender}")
         return None
 
-    new_sender = GmailSender(user_id=sender.user_id)
+    new_sender = GmailSender(user_id=sender.user_id, status=address_action)
     session.add(new_sender)
     session.commit()
     new_address = GmailSenderAddress(

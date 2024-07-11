@@ -79,8 +79,8 @@ export default function Home() : React.ReactElement {
       });    
   };
 
-  const onSplit = (address_id: string) => {
-    axios.post("/api/split_address", {address: address_id}).then(
+  const onSplit = (action: string, sender, address_id: string) => {
+    axios.post("/api/split_address", {action, address: address_id}).then(
       (response) => {
         getSenderStats().then((data) => {
         setStats(data);

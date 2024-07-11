@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Table, Button, Row, Col } from 'antd';
-import { ColumnType } from 'antd/es/table/interface';
 import { EMAIL_COUNT_COLUMN, IMPORTANCE_COLUMN, IMPORTANCE_PERCENT_COLUMN, READ_PERCENT_COLUMN, REPLIED_PERCENT, SENDER_COLUMN, VALUE_PROP_COLUMN, renderAddresses } from './statsColumns';
 
   
@@ -14,7 +13,7 @@ export type Props = {
     stats: any;
     cleanProcess?: boolean;
     onDelete: (ids: string[]) => void;
-    onSplit: (address_id: string) => void;
+    onSplit: (action: string, sender, address_id: string) => void;
 };
 
 export default function SenderStats({stats, cleanProcess, onDelete, onSplit}: Props) : React.ReactElement {
@@ -23,8 +22,6 @@ export default function SenderStats({stats, cleanProcess, onDelete, onSplit}: Pr
 
   const rowSelection = {
     onChange: (newSelectedRowKeys, selectedRows) => {
-      console.log('Selected row keys: ', newSelectedRowKeys);
-      console.log('Selected rows: ', selectedRows);
       setSelectedRowKeys(newSelectedRowKeys);
     },
     selectedRowKeys, // This ensures the selected rows are controlled by state

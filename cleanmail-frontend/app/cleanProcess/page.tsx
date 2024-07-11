@@ -54,17 +54,23 @@ export default function Home() : React.ReactElement {
         updateStats()
     }, [updateStats]);
 
-    const onSplit = (address: string) => {
-        setProcessing(true);
-        axios.post("/api/split_address", {address}).then(updateStats);       
-    }
-    const onAction = React.useCallback((action: string, id: string) => {
-        axios.post("/api/update_senders", {senders: [id], action}).then(
-            () => {
-                setProcessing(true)           
-                updateStats();
-            })
-        }, [updateStats])
+    const onSplit = async (action: string, sender, address_id: string) => {
+        sender['addresses'].forEach((address) => {
+            if (address['id'] === address_id) {
+                address['disabled'] = true;
+            }
+        })
+        // Force an update when the address is split
+        setStats({...stats});
+        await axios.post("/api/split_address", {address_id, action});
+    };       
+    
+    const onAction = React.useCallback(async (action: string, id: string) => {
+        setProcessing(true)
+        await axios.post("/api/update_senders", {senders: [id], action});
+        setStats({senders: stats['senders'].filter((sender) => sender['id'] !== id)});
+        setProcessing(false)
+        }, [stats])
 
     const processBatch = React.useCallback((action: string) => {
         console.log('Process', action);

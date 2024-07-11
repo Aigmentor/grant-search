@@ -89,9 +89,7 @@ def sender_batch(user, credentials, session):
     )
 
     senders = sorted(senders, key=lambda sender: sender.value_prop(), reverse=True)
-    logging.error("Sending %d senders1", len(senders))
     senders = senders[:5]
-    logging.error("Sending %d senders2", len(senders))
     return stats_for_senders(senders, use_threshold=False)
 
 
@@ -203,13 +201,21 @@ def logout():
 @api.route("/split_address", methods=["POST"])
 @login_required
 def split_address(user, credentials, session):
-    address_id = request.json.get("address")
-    logging.info("Splitting address: %s", address_id)
+    address_id = request.json.get("address_id")
+    action = request.json.get("action")
+    logging.info(f"{action} address: {address_id}")
     address = session.get(db.GmailSenderAddress, address_id)
     if address is None or address.user_id != user.id:
         return jsonify({"error": "Address not found"}), 400
 
-    new_address = scan.split_address(session, address)
+    address_action = db.SenderStatus.NONE
+    if action == "clean":
+        address_action = db.SenderStatus.CLEAN
+    elif action == "keep":
+        address_action = db.SenderStatus.KEEP
+
+    new_address = scan.split_address(session, address, address_action)
+
     return jsonify(
         {
             "status": "success" if new_address else "failure",
