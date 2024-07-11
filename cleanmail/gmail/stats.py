@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -78,6 +79,7 @@ def compute_stats_for_sender(session: Session, sender_id: int):
 
 def compute_stats(session: Session, user: GoogleUser):
     logging.info(f"Computing stats for {user.email}")
+    start_time = datetime.now()
     senders = session.query(GmailSender).filter(GmailSender.user_id == user.id).all()
 
     with ThreadPoolExecutor(max_workers=6) as executor:
@@ -85,3 +87,6 @@ def compute_stats(session: Session, user: GoogleUser):
             lambda sender: compute_stats_for_sender(get_scoped_session(), sender.id),
             senders,
         )
+    logging.info(
+        f"Done computes stats for {user.email} in {datetime.now() - start_time}"
+    )

@@ -46,7 +46,7 @@ def _send_background_task(task_name: str, spec: dict):
 
 
 def _process_scan_email(user_id: int):
-    session = database.get_session()
+    session = database.get_scoped_session()
     user = session.get(GoogleUser, user_id)
     if user is None:
         logging.error(f"User {user_id} not found")
@@ -54,6 +54,7 @@ def _process_scan_email(user_id: int):
 
     logging.info(f"Processing scan email for user {user.email}")
     scan.scan(session, user, 10000)
+    compute_stats(session, user)
     logging.info(f"Finished processing scan email for user {user.email}")
 
 
