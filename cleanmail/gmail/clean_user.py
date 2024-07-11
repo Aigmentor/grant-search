@@ -49,7 +49,7 @@ def clean_sender(user_id: int, sender_id: int):
             session.query(GmailThread)
             .filter(
                 GmailThread.user_id == user_id,
-                GmailThread.sender == sender_id,
+                GmailThread.sender_id == sender_id,
                 GmailThread.most_recent_date < stop_date,
                 GmailThread.has_replied == False,
                 or_(GmailThread.deleted.is_(None), GmailThread.deleted == False),
