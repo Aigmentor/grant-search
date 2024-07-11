@@ -113,6 +113,7 @@ def extract_sender_from_headers(headers):
                     name = match.group("name") or from_email
                     # Remove quotes
                     name = name.replace('"', "")
+                    from_email = from_email.lower()
                     return from_email, name
                 else:
                     print(f"Failed to match: {headers}")
