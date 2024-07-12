@@ -58,7 +58,7 @@ def clean_sender(user_id: int, sender_id: int):
             .all()
         )
 
-        logging.info(f"Deleting {len(threads)} threads for sender {sender.email}")
+        logging.info(f"Deleting {len(threads)} threads for sender {sender.addresses}")
         service = gmail_api.get_service(credentials=user.get_google_credentials())
         label_id = gmail_api.get_or_create_label_id(service, DELETED_LABEL)
         for thread in threads:
