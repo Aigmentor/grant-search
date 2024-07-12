@@ -85,10 +85,11 @@ def sender_batch(user, credentials, session):
         .filter(db.GmailSender.emails_sent > 0)
         .filter(db.GmailSender.status == db.SenderStatus.NONE)
         .order_by(desc(db.GmailSender.emails_sent))
-        .all()
+        .limit(200)
     )
 
     senders = sorted(senders, key=lambda sender: sender.value_prop(), reverse=True)
+    senders = [sender for sender in senders if not sender.is_personal_domain()]
     senders = senders[:5]
     return stats_for_senders(senders, use_threshold=False)
 
