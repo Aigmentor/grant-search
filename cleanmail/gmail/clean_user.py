@@ -61,8 +61,10 @@ def clean_sender(user_id: int, sender_id: int):
         logging.info(f"Deleting {len(threads)} threads for sender {sender.addresses}")
         service = gmail_api.get_service(credentials=user.get_google_credentials())
         label_id = gmail_api.get_or_create_label_id(service, DELETED_LABEL)
-        for thread in threads:
+        for i, thread in enumerate(threads):
             delete_thread(session, service, thread, label_id)
+            if i % 100 == 99:
+                logging.info(f"Deleted {i+1} threads for {sender.addresses[0].email}")
         sender.last_cleaned = datetime.datetime.now()
         session.commit()
         logging.info(f"Done deleting threads for {sender.addresses}")
