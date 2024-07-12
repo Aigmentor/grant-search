@@ -65,7 +65,7 @@ def clean_sender(user_id: int, sender_id: int):
             delete_thread(session, service, thread, label_id)
         sender.last_cleaned = datetime.datetime.now()
         session.commit()
-        logging.info(f"Done deleting threads for {sender.email}")
+        logging.info(f"Done deleting threads for {sender.add}")
     except Exception as e:
         logging.exception(f"Error deleting sender {sender_id}: {e}")
 
