@@ -2,14 +2,19 @@ from concurrent.futures import ThreadPoolExecutor
 import datetime
 import logging
 from typing import List
-from cleanmail.db.models import GmailSender, GmailThread, GoogleUser, SenderStatus
+from cleanmail.db.models import (
+    DELETED_LABEL,
+    GmailSender,
+    GmailThread,
+    GoogleUser,
+    SenderStatus,
+)
 from cleanmail.db.database import get_scoped_session, get_scoped_session, get_session
 import cleanmail.gmail.api as gmail_api
 from sqlalchemy import or_
 
 from cleanmail.gmail.stats import compute_stats
 
-DELETED_LABEL = "deleted_by_cleanmail"
 _MAX_CLEAN_THREADS = 8
 
 
@@ -60,7 +65,8 @@ def clean_sender(user_id: int, sender_id: int):
 
         logging.info(f"Deleting {len(threads)} threads for sender {sender.addresses}")
         service = gmail_api.get_service(credentials=user.get_google_credentials())
-        label_id = gmail_api.get_or_create_label_id(service, DELETED_LABEL)
+        label_id = user.cleanmail_label_id
+        assert label_id is not None
         for i, thread in enumerate(threads):
             delete_thread(session, service, thread, label_id)
             if i % 100 == 99:

@@ -16,14 +16,13 @@ from cleanmail.db.models import (
     GoogleUser,
     GmailThread,
     SenderStatus,
+    DELETED_LABEL,
 )
 from cleanmail.gmail import api as gmail_api
 from cleanmail.gmail import stats
 from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-
-from cleanmail.gmail.clean_user import DELETED_LABEL
 
 # Fewer threads in production. It's closer to DB and so hits gmail api much faster
 # with fewer threads

@@ -49,12 +49,19 @@ class UserStatus(Base):
 T = TypeVar("T", bound="GoogleUser")
 
 
+DELETED_LABEL = "deleted_by_cleanmail2"
+
+
 class GoogleUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True)
     name = Column(String)
     credentials = Column(String)
+
+    # The label ID for the CleanMail label in the user's Gmail account
+    cleanmail_label_id = Column(String)
+
     status = relationship("UserStatus", back_populates="user", uselist=False)
     threads = relationship("GmailThread", back_populates="user")
     senders = relationship("GmailSender", back_populates="user")
@@ -88,6 +95,14 @@ class GoogleUser(Base):
             session.add(status)
         else:
             user.credentials = serialized_credentials
+
+        if user.cleanmail_label_id is None:
+            from cleanmail.gmail import api as gmail_api
+
+            user.cleanmail_label_id = gmail_api.get_or_create_label_id(
+                gmail_api.get_service(user.get_google_credentials()), DELETED_LABEL
+            )
+
         session.commit()
         return user
 
