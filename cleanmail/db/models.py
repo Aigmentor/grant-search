@@ -156,8 +156,8 @@ class AddressStats:
         )
 
     def value_prop(self):
-        sigmoid = 1 / (1 + math.exp(-self.importance_score() * 100))
-        return (1 - sigmoid) * self.count
+        sigmoid = 1 / (1 + math.exp(-self.importance_score() / 10))
+        return ((1 - sigmoid) ** 2) * self.count
 
     def __repr__(self):
         return f"AddressStats({self.address}, {self.count}, {self.deleted}, {self.important}, {self.unread}, {self.replied}, {self.importance_score()})"
