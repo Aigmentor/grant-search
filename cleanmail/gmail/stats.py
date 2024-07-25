@@ -79,30 +79,38 @@ def compute_stats_for_sender(session: Session, sender_id: int):
                 stats.important += 1
             if thread.deleted:
                 stats.deleted += 1
+        sender_stats = AddressStats(sender.get_primary_address().email)
 
-        sender.emails_sent = sum([stat.count for stat in stats_by_address.values()])
-        sender.emails_important = sum(
+        sender_stats.count = sum([stat.count for stat in stats_by_address.values()])
+        sender_stats.important = sum(
             [stat.important for stat in stats_by_address.values()]
         )
-        sender.emails_replied = sum(
-            [stat.replied for stat in stats_by_address.values()]
-        )
-        sender.emails_unread = sum([stat.unread for stat in stats_by_address.values()])
-        sender.emails_deleted = sum(
-            [stat.deleted for stat in stats_by_address.values()]
-        )
+        sender_stats.replied = sum([stat.replied for stat in stats_by_address.values()])
+        sender_stats.unread = sum([stat.unread for stat in stats_by_address.values()])
+        sender_stats.deleted = sum([stat.deleted for stat in stats_by_address.values()])
+        sender.stats = sender_stats
+        sender.emails_sent = sender_stats.count
+        for address in addresses:
+            stats = stats_by_address[address.id]
+            address.stats = stats
 
         session.commit()
 
         # Check if we should automatically split any items
-        top_level_importance = sender.get_stats().importance_score()
-        if top_level_importance < 0.0001:
-            logging.warning(f"scores: {sender.get_stats()}")
+        top_level_importance = sender.stats.importance_score()
+
         if len(addresses) > 1:
             for address in addresses:
                 stats = stats_by_address[address.id]
                 importance = stats.importance_score()
-                if importance > 1 and importance > top_level_importance * 5:
+                if (
+                    importance > 10
+                    and (
+                        importance > top_level_importance * 3
+                        or importance < top_level_importance / 3
+                    )
+                    and (importance < 60 or top_level_importance < 60)
+                ):
                     logging.warning(
                         f"splitting {address.email}: {importance} vs {top_level_importance}"
                     )
@@ -111,6 +119,11 @@ def compute_stats_for_sender(session: Session, sender_id: int):
                     split_address(session, address, SenderStatus.NONE)
                     # Return immediately, because split_address will call compute_stats again
                     return
+                else:
+                    if address.stats.count > 20:
+                        logging.warning(
+                            f"NOT splitting {address.email}: {importance} vs {top_level_importance} {address.stats}"
+                        )
     except Exception as e:
         logging.error(f"Error computing stats for sender {sender_id}: {e}")
         traceback.print_exc()

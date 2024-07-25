@@ -1,12 +1,16 @@
 import enum
+import json
+import logging
 import math
 from typing import Type, TypeVar
 from sqlalchemy import (
     JSON,
+    VARCHAR,
     Boolean,
     DateTime,
     ForeignKey,
     Index,
+    TypeDecorator,
     asc,
     Column,
     Integer,
@@ -120,33 +124,6 @@ _PERSONAL_DOMAINS = set(
 )
 
 
-class GmailSenderAddress(Base):
-    __tablename__ = "gmail_sender_address"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    user = relationship("GoogleUser", uselist=False)
-
-    sender_id = Column(Integer, ForeignKey("gmail_sender.id"))
-    sender = relationship("GmailSender", back_populates="addresses")
-
-    email = Column(String)
-    name = Column(String)
-    email_count = Column(Integer, default=0)
-
-    __table_args__ = (
-        Index("idx_gmail_sender_address_email", "user_id", "email"),
-        Index("idx_gmail_sender_address_name", "user_id", "name"),
-        Index("idx_gmail_sender_addresses_sender_id", "sender_id"),
-    )
-
-
-class SenderStatus(enum.Enum):
-    NONE = "none"
-    CLEAN = "clean"
-    KEEP = "keep"
-    LATER = "later"
-
-
 class AddressStats:
     def __init__(self, address: str):
         self.address = address
@@ -172,9 +149,10 @@ class AddressStats:
     def importance_score(self):
         return (
             ((self.read_fraction() + 0.01) ** 0.2)
-            * ((self.replied_fraction() + 0.3) ** 2)
+            * ((self.replied_fraction() + 0.3) ** 3)
             * (self.important_fraction() + 0.02)
             * (20.0 if self.is_personal_domain() else 1.0)
+            * 10000
         )
 
     def value_prop(self):
@@ -183,6 +161,60 @@ class AddressStats:
 
     def __repr__(self):
         return f"AddressStats({self.address}, {self.count}, {self.deleted}, {self.important}, {self.unread}, {self.replied}, {self.importance_score()})"
+
+    @staticmethod
+    def decode(data: dict) -> "AddressStats":
+        stats = AddressStats(data["address"])
+        stats.count = data["count"]
+        stats.deleted = data["deleted"]
+        stats.important = data["important"]
+        stats.unread = data["unread"]
+        stats.replied = data["replied"]
+        return stats
+
+
+class AddressStatsType(TypeDecorator):
+
+    impl = VARCHAR
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value.__dict__)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return AddressStats.decode(json.loads(value))
+        else:
+            return AddressStats(None)
+
+
+class GmailSenderAddress(Base):
+    __tablename__ = "gmail_sender_address"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("GoogleUser", uselist=False)
+
+    sender_id = Column(Integer, ForeignKey("gmail_sender.id"))
+    sender = relationship("GmailSender", back_populates="addresses")
+
+    email = Column(String)
+    name = Column(String)
+    email_count = Column(Integer, default=0)
+    stats = Column(AddressStatsType)
+
+    __table_args__ = (
+        Index("idx_gmail_sender_address_email", "user_id", "email"),
+        Index("idx_gmail_sender_address_name", "user_id", "name"),
+        Index("idx_gmail_sender_addresses_sender_id", "sender_id"),
+    )
+
+
+class SenderStatus(enum.Enum):
+    NONE = "none"
+    CLEAN = "clean"
+    KEEP = "keep"
+    LATER = "later"
 
 
 class GmailSender(Base):
@@ -194,26 +226,15 @@ class GmailSender(Base):
     addresses = relationship("GmailSenderAddress", back_populates="sender")
     threads = relationship("GmailThread", back_populates="sender")
 
+    # Replicated from stats because we need to sort/filter by it
     emails_sent = Column(Integer)
-    emails_unread = Column(Integer)
-    emails_important = Column(Integer)
-    emails_replied = Column(Integer)
-    emails_deleted = Column(Integer)
+    stats = Column(AddressStatsType)
 
     status = Column(sqlalchemy.Enum(SenderStatus), default=SenderStatus.NONE)
     last_cleaned = Column(DateTime)
 
     def get_primary_address(self) -> GmailSenderAddress:
-        return max(self.addresses, key=lambda x: x.email_count)
-
-    def read_fraction(self):
-        return 1 - (self.emails_unread * 1.0 / self.emails_sent)
-
-    def replied_fraction(self):
-        return self.emails_replied * 1.0 / self.emails_sent
-
-    def important_fraction(self):
-        return self.emails_important * 1.0 / self.emails_sent
+        return max(self.addresses, key=lambda x: x.stats.count)
 
     def is_personal_domain(self):
         for address in self.addresses:
@@ -223,23 +244,6 @@ class GmailSender(Base):
             if domain in _PERSONAL_DOMAINS:
                 return True
         return False
-
-    def importance_score(self):
-        return (
-            ((self.read_fraction() + 0.01) ** 0.5)
-            * ((self.replied_fraction() + 0.3) ** 2)
-            * self.important_fraction()
-            * (8.0 if self.is_personal_domain() else 1.0)
-        )
-
-    def get_stats(self):
-        stats = AddressStats(self.get_primary_address().email)
-        stats.count = self.emails_sent
-        stats.deleted = self.emails_deleted
-        stats.important = self.emails_important
-        stats.unread = self.emails_unread
-        stats.replied = self.emails_replied
-        return stats
 
     __table_args__ = (Index("idx_gmail_sender_user_id", "user_id"),)
 

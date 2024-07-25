@@ -88,7 +88,9 @@ def sender_batch(user, credentials, session):
         .limit(200)
     )
 
-    senders = sorted(senders, key=lambda sender: sender.value_prop(), reverse=True)
+    senders = sorted(
+        senders, key=lambda sender: sender.stats.value_prop(), reverse=True
+    )
     senders = [sender for sender in senders if not sender.is_personal_domain()]
     senders = senders[:5]
     return stats_for_senders(senders, use_threshold=False)
@@ -128,23 +130,39 @@ def stats_for_senders(senders, use_threshold=True):
         return jsonify({})
     sender_stats = []
     for sender in senders:
-        stats = sender.get_stats()
+        stats = sender.stats
+        addresses = []
+        for address in [
+            address for address in sender.addresses if address.stats.count > 0
+        ]:
+            addresses.append(
+                {
+                    "name": address.name,
+                    "email": address.email,
+                    "id": address.id,
+                    "emailCount": address.stats.count,
+                    "emailsUnread": address.stats.unread,
+                    "emailsImportant": address.stats.important,
+                    "emailsReplied": address.stats.replied,
+                    "readFraction": address.stats.read_fraction(),
+                    "repliedFraction": address.stats.replied_fraction(),
+                    "importantFraction": address.stats.important_fraction(),
+                    "importanceScore": address.stats.importance_score(),
+                    "importantSender": (
+                        address.stats.important_fraction() > 0.2
+                        or address.stats.replied_fraction() > 0.05
+                    ),
+                }
+            )
+        addresses = sorted(addresses, key=lambda x: x["importanceScore"], reverse=True)
         sender_stats.append(
             {
-                "addresses": [
-                    {
-                        "name": address.name,
-                        "email": address.email,
-                        "emailCount": address.email_count,
-                        "id": address.id,
-                    }
-                    for address in sender.addresses
-                ],
+                "addresses": addresses,
                 "id": sender.id,
                 "name": sender.get_primary_address().name,
                 "email": sender.get_primary_address().email,
                 "shouldBeCleaned": sender.status == db.SenderStatus.CLEAN,
-                "emailsSent": sender.emails_sent,
+                "emailCount": sender.emails_sent,
                 "percentOfEmails": stats.count * 100.0 / total_emails,
                 "emailsUnread": stats.unread,
                 "emailsImportant": stats.important,

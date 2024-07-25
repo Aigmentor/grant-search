@@ -1,4 +1,4 @@
-import { Button, Col, Row } from "antd";
+import { Button, Col, Row, Table } from "antd";
 import ButtonGroup from "antd/es/button/button-group";
 
 export interface DataType {
@@ -11,47 +11,91 @@ export interface DataType {
     emailsSent: number;
   }
 
+type AddressTableProps = {
+    sender: Map<string, string>;
+    addresses: DataType[];
+    onSplit: (action: string, sender, address: string) => void;
+}
 
-export const renderAddresses = (row, onSplit: (action: string, sender, address: string) => void) : React.ReactElement => {
-    const addresses = row['addresses'];
+function AddressTable({sender, addresses, onSplit}: AddressTableProps) : React.ReactElement {
+   
     const createButton = (action, address, label) => (
         <Button 
-            disabled={address['disabled']} 
-            onClick={() => onSplit(action, row, address['id'])}>{label}
+            disabled={address['disabled']}
+            onClick={() => onSplit(action, sender, address['id'])}>{label}
         </Button>
     )
 
-    return <>
-        <Row gutter={18}>
-        <Col span={2}></Col>
-        <Col span={4}></Col>
-        <Col span={12}>Address</Col>
-        <Col span={2}>Email Count</Col>
-        </Row>
-        {addresses.map((address, index) => (
-            <Row key={index} gutter={18} className={address['disabled'] ? "disabledAddress" : ""}>
-                <Col span={2}></Col>
-                <Col span={4}>
-                    <ButtonGroup>
-                        {createButton('keep', address, 'Keep')}
-                        {createButton('clean', address, 'Clean')}
-                        {createButton('split', address, 'Split')}
-                    </ButtonGroup>
-                </Col>
-                <Col span={12}>{`${address["name"]} <`}<a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(address["email"])}`} target="_blank" rel="noopener noreferrer">{address["email"]}</a>
-                    {">"} </Col>
-                <Col span={2}>{address["emailCount"]}</Col>
-            </Row>
-                ))}
-                </>
-  };
+    const actionColumn = {
+        title: 'Action',
+        dataIndex: 'id',
+        key: 'id',
+        render: (status, row) => {
+            return <ButtonGroup>
+                {createButton('keep', row, 'Keep')}
+                {createButton('clean', row, 'Clean')}
+                {createButton('split', row, 'Split')}
+            </ButtonGroup>
+        },
+    };
+
+    const columns = [
+        actionColumn,
+        IMPORTANCE_COLUMN,
+        SENDER_COLUMN,
+        EMAIL_COUNT_COLUMN,
+        READ_PERCENT_COLUMN,
+        REPLIED_PERCENT,
+        IMPORTANCE_PERCENT_COLUMN
+      ]
+    return <Table
+        columns={columns}
+        rowKey="id"
+        dataSource={addresses}
+        pagination={{ pageSize: 10 }}       
+        />
+}
+
+export const renderAddresses = (row, onSplit: (action: string, sender, address: string) => void) : React.ReactElement => {
+    const addresses = row['addresses'];
+ 
+    
+
+    
+    return <AddressTable sender={row} addresses={addresses} onSplit={onSplit} />
+}
+
+//     return <>
+//         <Row gutter={18}>
+//         <Col span={2}></Col>
+//         <Col span={4}></Col>
+//         <Col span={12}>Address</Col>
+//         <Col span={2}>Email Count</Col>
+//         </Row>
+//         {addresses.map((address, index) => (
+//             <Row key={index} gutter={18} className={address['disabled'] ? "disabledAddress" : ""}>
+//                 <Col span={2}></Col>
+//                 <Col span={4}>
+//                     <ButtonGroup>
+//                         {createButton('keep', address, 'Keep')}
+//                         {createButton('clean', address, 'Clean')}
+//                         {createButton('split', address, 'Split')}
+//                     </ButtonGroup>
+//                 </Col>
+//                 <Col span={12}>{`${address["name"]} <`}<a href={`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(address["email"])}`} target="_blank" rel="noopener noreferrer">{address["email"]}</a>
+//                     {">"} </Col>
+//                 <Col span={2}>{address["emailCount"]}</Col>
+//             </Row>
+//                 ))}
+//                 </>
+//   };
 
 export const IMPORTANCE_COLUMN = {
     title: 'Importance',
     dataIndex: 'importanceScore',
     key: 'importanceScore',
     render: (importanceScore) => {
-        return `${ (importanceScore * 10000).toFixed(3)}`
+        return `${ (importanceScore).toFixed(3)}`
     },
     sorter: (a, b) => a.importanceScore - b.importanceScore,
   };
@@ -101,8 +145,8 @@ export const SENDER_COLUMN =  {
 
 export const EMAIL_COUNT_COLUMN = {
   title: 'Email Count',
-  dataIndex: 'emailsSent',
-  key: 'emailsSent',
+  dataIndex: 'emailCount',
+  key: 'emailCount',
   sorter: (a, b) => a.emailsSent - b.emailsSent,
 
 };
