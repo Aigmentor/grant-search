@@ -147,6 +147,44 @@ class SenderStatus(enum.Enum):
     LATER = "later"
 
 
+class AddressStats:
+    def __init__(self, address: str):
+        self.address = address
+        self.count = 0
+        self.deleted = 0
+        self.important = 0
+        self.unread = 0
+        self.replied = 0
+
+    def read_fraction(self):
+        return 1 - (self.unread * 1.0 / self.count)
+
+    def replied_fraction(self):
+        return self.replied * 1.0 / self.count
+
+    def important_fraction(self):
+        return self.important * 1.0 / self.count
+
+    def is_personal_domain(self):
+        domain = self.address.split("@")[1] if "@" in self.address else self.address
+        return domain in _PERSONAL_DOMAINS
+
+    def importance_score(self):
+        return (
+            ((self.read_fraction() + 0.01) ** 0.2)
+            * ((self.replied_fraction() + 0.3) ** 2)
+            * (self.important_fraction() + 0.02)
+            * (20.0 if self.is_personal_domain() else 1.0)
+        )
+
+    def value_prop(self):
+        sigmoid = 1 / (1 + math.exp(-self.importance_score() * 100))
+        return (1 - sigmoid) * self.count
+
+    def __repr__(self):
+        return f"AddressStats({self.address}, {self.count}, {self.deleted}, {self.important}, {self.unread}, {self.replied}, {self.importance_score()})"
+
+
 class GmailSender(Base):
     __tablename__ = "gmail_sender"
     id = Column(Integer, primary_key=True)
@@ -194,9 +232,14 @@ class GmailSender(Base):
             * (8.0 if self.is_personal_domain() else 1.0)
         )
 
-    def value_prop(self):
-        sigmoid = 1 / (1 + math.exp(-self.importance_score() * 100))
-        return (1 - sigmoid) * self.emails_sent
+    def get_stats(self):
+        stats = AddressStats(self.get_primary_address().email)
+        stats.count = self.emails_sent
+        stats.deleted = self.emails_deleted
+        stats.important = self.emails_important
+        stats.unread = self.emails_unread
+        stats.replied = self.emails_replied
+        return stats
 
     __table_args__ = (Index("idx_gmail_sender_user_id", "user_id"),)
 

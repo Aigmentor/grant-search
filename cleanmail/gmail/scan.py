@@ -298,12 +298,23 @@ def scan(
                     logging.info(
                         f"Processed {i+1} messages in {time_elapsed.total_seconds()}s: {(i+1.0)/time_elapsed.total_seconds()} messages/s"
                     )
-                    status.data = {
-                        "email_count": session.query(GmailThread)
-                        .filter(GmailThread.user_id == user_id)
-                        .count(),
-                    }
-                    session.commit()
+                    try:
+                        status.data = {
+                            "email_count": session.query(GmailThread)
+                            .filter(GmailThread.user_id == user_id)
+                            .count(),
+                        }
+                        session.commit()
+                    except Exception as e:
+                        logging.exception(f"Error updating status: {e}")
+                        session = get_session()
+                        status = (
+                            session.query(GoogleUser)
+                            .filter_by(id=user_id)
+                            .first()
+                            .status
+                        )
+
         status.status = "scanned"
 
         status.data = {
@@ -409,6 +420,6 @@ def split_address(
 
     session.delete(address)
     session.commit()
-    stats.compute_stats_for_sender(session, sender)
-    stats.compute_stats_for_sender(session, new_sender)
+    stats.compute_stats_for_sender(session, sender.id)
+    stats.compute_stats_for_sender(session, new_sender.id)
     return new_address

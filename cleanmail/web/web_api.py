@@ -126,40 +126,41 @@ def stats_for_senders(senders, use_threshold=True):
 
     if total_emails == 0:
         return jsonify({})
-
-    sender_stats = [
-        {
-            "addresses": [
-                {
-                    "name": address.name,
-                    "email": address.email,
-                    "emailCount": address.email_count,
-                    "id": address.id,
-                }
-                for address in sender.addresses
-            ],
-            "id": sender.id,
-            "name": sender.get_primary_address().name,
-            "email": sender.get_primary_address().email,
-            "shouldBeCleaned": sender.status == db.SenderStatus.CLEAN,
-            "emailsSent": sender.emails_sent,
-            "percentOfEmails": sender.emails_sent * 100.0 / total_emails,
-            "emailsUnread": sender.emails_unread,
-            "emailsImportant": sender.emails_important,
-            "emailsReplied": sender.emails_replied,
-            "readFraction": sender.read_fraction(),
-            "repliedFraction": sender.replied_fraction(),
-            "importantFraction": sender.important_fraction(),
-            "importanceScore": sender.importance_score(),
-            "importantSender": (
-                sender.important_fraction() > 0.2 or sender.replied_fraction() > 0.05,
-            ),
-            "valueProp": sender.value_prop(),
-            "personalDomain": sender.is_personal_domain(),
-            "status": sender.status.value,
-        }
-        for sender in senders
-    ]
+    sender_stats = []
+    for sender in senders:
+        stats = sender.get_stats()
+        sender_stats.append(
+            {
+                "addresses": [
+                    {
+                        "name": address.name,
+                        "email": address.email,
+                        "emailCount": address.email_count,
+                        "id": address.id,
+                    }
+                    for address in sender.addresses
+                ],
+                "id": sender.id,
+                "name": sender.get_primary_address().name,
+                "email": sender.get_primary_address().email,
+                "shouldBeCleaned": sender.status == db.SenderStatus.CLEAN,
+                "emailsSent": sender.emails_sent,
+                "percentOfEmails": stats.count * 100.0 / total_emails,
+                "emailsUnread": stats.unread,
+                "emailsImportant": stats.important,
+                "emailsReplied": stats.replied,
+                "readFraction": stats.read_fraction(),
+                "repliedFraction": stats.replied_fraction(),
+                "importantFraction": stats.important_fraction(),
+                "importanceScore": stats.importance_score(),
+                "importantSender": (
+                    stats.important_fraction() > 0.2 or stats.replied_fraction() > 0.05,
+                ),
+                "valueProp": stats.value_prop(),
+                "personalDomain": sender.is_personal_domain(),
+                "status": sender.status.value,
+            }
+        )
     return jsonify({"senders": sender_stats})
 
 
