@@ -1,7 +1,10 @@
 import logging
 import os
+from pathlib import Path
 
-from flask import Flask, request, send_from_directory, session, redirect, url_for
+from flask import Flask, request, session, redirect, url_for
+from werkzeug.exceptions import NotFound
+
 from cleanmail.common import MODE_ENUM, get_mode
 import cleanmail.db.models as db
 from cleanmail.db.database import get_session
@@ -27,15 +30,14 @@ def index():
     return app.send_static_file("index.html")
 
 
-@app.route("/<path:path>", methods=["GET"])
-def catch_all(path):
-    # Check if the path matches a static resource
-    if os.path.exists(os.path.join(app.static_folder, path)):
-        # Serve the static resource found at the path
-        return send_from_directory(app.static_folder, path)
+@app.errorhandler(NotFound)
+def handle_static_missing(e):
+    path = Path(request.path)
+    if path.suffix == "" and request.path.startswith("/static"):
+        new_path = request.path[8:] + ".html"
+        return app.send_static_file(new_path)
     else:
-        # Serve index.html for any other path, allowing Next.js to handle the routing
-        return send_from_directory(app.static_folder, "index.html")
+        return "File not found.", 404
 
 
 @app.route("/app/login/<string:state>")
