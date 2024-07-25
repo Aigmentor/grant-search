@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Flask, request, session, redirect, url_for
+from flask import Flask, request, send_from_directory, session, redirect, url_for
 from cleanmail.common import MODE_ENUM, get_mode
 import cleanmail.db.models as db
 from cleanmail.db.database import get_session
@@ -25,6 +25,17 @@ db.init_db()
 def index():
     logging.info(f"Index page from: {app.static_folder}")
     return app.send_static_file("index.html")
+
+
+@app.route("/<path:path>", methods=["GET"])
+def catch_all(path):
+    # Check if the path matches a static resource
+    if os.path.exists(os.path.join(app.static_folder, path)):
+        # Serve the static resource found at the path
+        return send_from_directory(app.static_folder, path)
+    else:
+        # Serve index.html for any other path, allowing Next.js to handle the routing
+        return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route("/app/login/<string:state>")
