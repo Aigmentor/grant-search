@@ -97,23 +97,37 @@ class Grant(Base):
     )
     raw_text = deferred(Column(LargeBinary))
 
+    # Update the relationship to include cascade delete
+    derived_data = relationship(
+        "GrantDerivedData", back_populates="grant", cascade="all, delete-orphan"
+    )
+
+    embeddings = relationship(
+        "GrantEmbedding", back_populates="grant", cascade="all, delete-orphan"
+    )
+
 
 class GrantDerivedData(Base):
     __tablename__ = "grant_derived_data"
     id = Column(Integer, primary_key=True)
-    grant_id = Column(Integer, ForeignKey("grants.id"))
+    grant_id = Column(Integer, ForeignKey("grants.id", ondelete="CASCADE"))
     dei = Column(Boolean)
     primary_dei = Column(Boolean)
     hard_science = Column(Boolean)
     political_science = Column(Boolean)
     carbon = Column(Boolean)
 
+    grant = relationship("Grant", back_populates="derived_data")
+
 
 class GrantEmbedding(Base):
     __tablename__ = "grant_embedding"
     id = Column(Integer, primary_key=True)
-    grant_id = Column(Integer, ForeignKey("grants.id"))
+    grant_id = Column(Integer, ForeignKey("grants.id", ondelete="CASCADE"))
     embedding: Mapped[Vector] = mapped_column(Vector(1536), nullable=False)
+
+    grant = relationship("Grant", back_populates="embeddings")
+
     __table_args__ = (
         Index(
             "idx_grant_embedding_user_id",

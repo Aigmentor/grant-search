@@ -175,7 +175,17 @@ class Ingester:
             session.commit()
 
         self.data_source = (
-            session.query(DataSource).filter(DataSource.name == self.source).first()
+            session.query(DataSource)
+            .filter(
+                DataSource.name == self.source_name
+                and DataSource.agency_id == agency.id
+            )
+            .first()
+            or session.query(DataSource)
+            .filter(
+                DataSource.origin == self.source and DataSource.agency_id == agency.id
+            )
+            .first()
         )
         if self.data_source:
             logger.info(f"Found existing data source: {self.source}")

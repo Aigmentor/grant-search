@@ -16,29 +16,25 @@ logger = logging.getLogger(__name__)
 
 
 class GrantAnalysis(BaseModel):
-    dei: Optional[bool] = Field(
-        required=True,
+    dei: bool = Field(
         description="""
         Set to true if the title/description mention things related to DEI, such as
         PoCs, Women, gay or trans. 
         """,
     )
-    primary_dei: Optional[bool] = Field(
-        required=True,
+    primary_dei: bool = Field(
         description="""
         Set to true if the title/description related to research primarily related to DEI,
         such as PoCs, Women, LGTBQ, Inequality or other DEI-related topics.
         """,
     )
-    hard_science: Optional[bool] = Field(
-        required=True,
+    hard_science: bool = Field(
         description="""
         Set to true if the title/description related to research primarily related to Hard Scientific
         research, such as Chemistry, Physics, Medicine, Biology, Geology, Space, etc..
         """,
     )
-    carbon: Optional[bool] = Field(
-        required=True,
+    carbon: bool = Field(
         description="""
         Set to true if the title/description related to research primarily related 
         Global Warming or CO2 emissions and impacts.
