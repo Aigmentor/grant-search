@@ -58,7 +58,6 @@ Fill out the results with appropriate JSON as described by the schema
 def _get_search_function(text: str) -> SearchFunction:
     text = f"User description: {text}"
     messages = format_for_llm(SYSTEM_PROMPT, text)
-    logging.info(messages)
     return ai_client.chat.completions.create(
         model=TOP_LEVEL_MODEL,
         messages=messages,
@@ -67,7 +66,6 @@ def _get_search_function(text: str) -> SearchFunction:
 
 
 def filter_grants_by_query(user_query: str, grant_description: str) -> bool:
-    logging.error(f"here1:")
     prompt = f"""
     You are answering this question: `{user_query}`
     You will be given a grant description. Use that to answer this question with
@@ -75,13 +73,11 @@ def filter_grants_by_query(user_query: str, grant_description: str) -> bool:
     The response must be in JSON format.
     """
     messages = format_for_llm(prompt, f'grant_description: \n"{grant_description}"')
-    logging.error(f"here2: {messages}")
     result = ai_client.chat.completions.create(
         model=FILTER_MODEL,
         messages=messages,
         response_model=GrantFilter,
     )
-    logging.info(f"Answer: {result}")
     return result.result
 
 
