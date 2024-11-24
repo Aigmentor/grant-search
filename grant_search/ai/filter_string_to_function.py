@@ -10,6 +10,8 @@ import logging
 from grant_search.ai.common import ai_client, format_for_llm
 from grant_search.filter_grants import filter_grants_from_ai
 
+logging.getLogger("instructor").setLevel(logging.WARNING)
+
 TOP_LEVEL_MODEL = "gpt-4o"
 FILTER_MODEL = "gpt-4o-mini"
 
@@ -94,7 +96,7 @@ def query_by_text(session, text: str):
     logger.info(f"Found {len(grants)} grants")
 
     filtered_grants = []
-    with ThreadPoolExecutor(max_workers=50) as executor:
+    with ThreadPoolExecutor(max_workers=80) as executor:
         # Create list of futures for each grant query
         futures = [
             executor.submit(
