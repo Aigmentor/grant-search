@@ -29,6 +29,12 @@ def index():
     return app.send_static_file("index.html")
 
 
+@app.route("/grants")
+def grants():
+    logging.info(f"Index page from: {app.static_folder}")
+    return app.send_static_file("grants.html")
+
+
 @app.errorhandler(NotFound)
 def handle_static_missing(e):
     path = Path(request.path)
@@ -37,29 +43,6 @@ def handle_static_missing(e):
         return app.send_static_file(new_path)
     else:
         return "File not found.", 404
-
-
-@app.route("/app/login/<string:state>")
-def login(state: str):
-    logging.info(f"Login with state {state} on {request.user_agent}")
-    return oauth.start_oauth_flow(state)
-
-
-@app.route("/app/oauth_redirect")
-def handle_login():
-    if oauth.oauth_handle_redirect():
-        credentials = oauth.get_credentials_from_flask_session()
-        status = "login_success"
-        db_session = get_session()
-        user = db.GoogleUser.get_or_create(
-            db_session,
-            session.get("username"),
-            oauth.serialize_credentials(credentials),
-        )
-    else:
-        status = "login_failure"
-
-    return redirect(url_for("index", status=status))
 
 
 if __name__ == "__main__":
