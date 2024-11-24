@@ -1,0 +1,229 @@
+import csv
+from datetime import datetime
+import gzip
+import json
+import os
+import tempfile
+import urllib.request
+import zipfile
+from urllib.parse import urlparse
+import io
+import logging
+import xml.etree.ElementTree as ET
+import ssl
+
+from grant_search.db.models import Agency, DataSource, Grant, Grantee
+from grant_search.db.database import Session
+
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def xml_to_dict(element):
+    result = {}
+    # Add element attributes if any exist
+    if element.attrib:
+        result.update(element.attrib)
+
+    # Handle child elements
+    for child in element:
+        child_dict = xml_to_dict(child)
+        child_tag = child.tag
+
+        if child_tag in result:
+            # If key exists, convert to list if not already
+            if not isinstance(result[child_tag], list):
+                result[child_tag] = [result[child_tag]]
+            result[child_tag].append(child_dict)
+        else:
+            result[child_tag] = child_dict
+
+    # Handle element text
+    if element.text and element.text.strip():
+        if result:  # If we have child elements/attributes
+            result["text"] = element.text.strip()
+        else:
+            result = element.text.strip()
+
+    return result
+
+
+class Ingester:
+    source: str
+    agency: str
+    source_name: str
+
+    def __init__(self, source_name: str, source: str, agency: str):
+        self.source = source
+        self.agency = agency
+        self.source_name = source_name
+
+    def _get_content(self) -> tuple[io.BytesIO, str]:
+        # Check if source is URL or local file
+        parsed = urlparse(self.source)
+        is_url = bool(parsed.scheme)
+        print(f"Getting {self.source} {is_url}")
+        # Get file object either from URL or local path
+        if is_url:
+            logger.info(f"Downloading: {self.source}")
+            # Create an SSL context that ignores certificate verification
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            response = urllib.request.urlopen(self.source, context=context)
+            file_content = response.read()
+
+            # Try to get filename from Content-Disposition header
+            filename = None
+            if "Content-Disposition" in response.headers:
+                cd = response.headers["Content-Disposition"]
+                if "filename=" in cd:
+                    filename = cd.split("filename=")[1].strip('"')
+
+            # Fall back to URL path if no Content-Disposition
+            if not filename:
+                filename = os.path.basename(parsed.path)
+
+            # If still no filename, use a default
+            if not filename:
+                filename = "downloaded_file"
+
+            logger.info(f"Detected filename: {filename}")
+        else:
+            with open(self.source, "rb") as f:
+                file_content = f.read()
+            filename = os.path.basename(self.source)
+
+        return io.BytesIO(file_content), filename
+
+    def _handle_zip(self, filename, file_content: io.BytesIO):
+        # Create temporary directory
+        temp_dir = tempfile.mkdtemp()
+
+        # Extract zip contents to temp directory
+        with zipfile.ZipFile(file_content, "r") as zip_ref:
+            zip_ref.extractall(temp_dir)
+
+        # Walk through all files in temp directory
+        for root, dirs, files in os.walk(temp_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                with open(file_path, "rt") as f:
+                    self.process_file(file_path, f.read())
+
+    def process_file(self, file_name, content):
+        if file_name.endswith(".xml"):
+            tree = ET.fromstring(content)
+            data = xml_to_dict(tree)
+            # For NSF data:
+            award = data["Award"]
+            title = award["AwardTitle"]
+            start_date = datetime.strptime(award["AwardEffectiveDate"], "%m/%d/%Y")
+            end_date = datetime.strptime(award["AwardExpirationDate"], "%m/%d/%Y")
+            amount = award["AwardAmount"]
+            description = award["AbstractNarration"]
+            investigators = award["Investigator"]
+            if type(investigators) != list:
+                investigators = [investigators]
+            investigators = [x["PI_FULL_NAME"] for x in investigators]
+            # Create grantees from investigators
+            grantees = []
+            for investigator in investigators:
+                # Check if grantee already exists
+                grantee = (
+                    self.session.query(Grantee)
+                    .filter(Grantee.name == investigator)
+                    .first()
+                )
+                if not grantee:
+                    logger.info(f"Creating new grantee: {investigator}")
+                    grantee = Grantee(name=investigator)
+                    self.session.add(grantee)
+                grantees.append(grantee)
+            self.session.commit()
+            grant = Grant(
+                title=title,
+                start_date=start_date,
+                end_date=end_date,
+                amount=float(amount),
+                description=description,
+                data_source_id=self.data_source.id,
+                raw_text=content.encode(),
+            )
+            # Add grantees to grant
+            grant.grantees.extend(grantees)
+            self.session.add(grant)
+            self.session.commit()
+            logger.info(f"Created grant: {title}")
+
+    def ingest(self):
+        self.session = Session()
+        session = self.session
+        # Check for existing agency
+        agency = session.query(Agency).filter(Agency.name == self.agency).first()
+        if not agency:
+            logger.warn(f"Creating agency: {self.agency}")
+            agency = Agency(name=self.agency)
+            session.add(agency)
+            session.commit()
+
+        self.data_source = (
+            session.query(DataSource).filter(DataSource.name == self.source).first()
+        )
+        if self.data_source:
+            logger.info(f"Found existing data source: {self.source}")
+            # Delete existing grants for this data source
+            grants_to_delete = (
+                session.query(Grant)
+                .filter(Grant.data_source_id == self.data_source.id)
+                .all()
+            )
+            for grant in grants_to_delete:
+                session.delete(grant)
+            session.commit()
+            logger.info(
+                f"Deleted {len(grants_to_delete)} existing grants for data source: {self.source}"
+            )
+        else:
+            logger.warn(f"Creating source: {self.source}")
+            self.data_source = DataSource(
+                name=self.source_name,
+                timestamp=datetime.now(),
+                agency_id=agency.id,
+                origin=self.source,
+            )
+            session.add(self.data_source)
+            session.commit()
+            logger.info(f"Created data source: {self.source}")
+
+        file_content, filename = self._get_content()
+
+        # Handle compressed files
+        if filename.endswith(".zip"):
+            self._handle_zip(filename, file_content)
+
+        elif filename.endswith(".gz"):
+            file_content = io.BytesIO(gzip.decompress(file_content))
+            # Remove .gz
+            new_filename = self.source[0:-3]
+            self.process_file(new_filename, file_content)
+
+        self.process_file(filename, file_content)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Ingest grant data from a URL or file")
+    parser.add_argument("--input_url", help="URL or path to input file", required=True)
+    parser.add_argument("--source_name", help="short name for source", required=True)
+    parser.add_argument("--agency", help="Agency name", required=True)
+
+    args = parser.parse_args()
+
+    ingester = Ingester(args.source_name, args.input_url, args.agency)
+    ingester.ingest()

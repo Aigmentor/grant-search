@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    LargeBinary,
     TypeDecorator,
     asc,
     Column,
@@ -19,7 +20,7 @@ from sqlalchemy import (
 )
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, mapped_column, Mapped
+from sqlalchemy.orm import relationship, mapped_column, Mapped, deferred
 
 from pgvector.sqlalchemy import Vector
 
@@ -34,12 +35,26 @@ def init_db():
     Base.metadata.create_all(database.engine)
 
 
+class Agency(Base):
+    __tablename__ = "agencies"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+
+    # One-to-many relationship with data sources
+    data_sources = relationship("DataSource", back_populates="agency")
+
+
 class DataSource(Base):
     __tablename__ = "data_sources"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     timestamp = Column(DateTime)
     origin = Column(String)
+
+    # Add foreign key to Agency
+    agency_id = Column(Integer, ForeignKey("agencies.id"))
+    # Add relationship back to Agency
+    agency = relationship("Agency", back_populates="data_sources")
 
     # Relationship to grants
     grants = relationship("Grant", back_populates="data_source")
@@ -66,9 +81,10 @@ grant_grantee = Table(
 class Grant(Base):
     __tablename__ = "grants"
     id = Column(Integer, primary_key=True)
-    start_year = Column(Integer)
-    end_year = Column(Integer)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
     amount = Column(Float)
+    title = Column(String)
     description = Column(String)
 
     # Foreign key to DataSource
@@ -79,6 +95,18 @@ class Grant(Base):
     grantees = relationship(
         "Grantee", secondary="grant_grantee", back_populates="grants"
     )
+    raw_text = deferred(Column(LargeBinary))
+
+
+class GrantDerivedData(Base):
+    __tablename__ = "grant_derived_data"
+    id = Column(Integer, primary_key=True)
+    grant_id = Column(Integer, ForeignKey("grants.id"))
+    dei = Column(Boolean)
+    primary_dei = Column(Boolean)
+    hard_science = Column(Boolean)
+    political_science = Column(Boolean)
+    carbon = Column(Boolean)
 
 
 class GrantEmbedding(Base):
