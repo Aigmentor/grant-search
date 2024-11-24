@@ -5,11 +5,10 @@ from pathlib import Path
 from flask import Flask, request, session, redirect, url_for
 from werkzeug.exceptions import NotFound
 
-from cleanmail.common import MODE_ENUM, get_mode
-import cleanmail.db.models as db
-from cleanmail.db.database import get_session
-import cleanmail.web.oauth as oauth
-import cleanmail.web.web_api as web_api
+from grant_search.common import MODE_ENUM, get_mode
+import grant_search.db.models as db
+from grant_search.db.database import get_session
+import grant_search.web.web_api as web_api
 
 logging.basicConfig(level=logging.DEBUG)
 

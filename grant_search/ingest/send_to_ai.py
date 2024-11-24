@@ -7,8 +7,7 @@ import logging
 from pydantic import BaseModel, Field
 import traceback
 
-from openai.types.chat import ChatCompletionMessageParam
-
+from grant_search.ai.common import format_for_llm, ai_client
 from grant_search.db.database import Session
 from grant_search.db.models import Grant, GrantDerivedData
 
@@ -50,25 +49,11 @@ Process the grant description below to answer the questions in the model.
 MAX_WORKERS = 4
 
 
-def format_for_llm(text: str) -> List[ChatCompletionMessageParam]:
-    """
-    Formats the messages into a set of messages for LLM.
-    Note that user_prompt_template *must* contain {conversation_text}
-    as that is where the conversation is inserted. It should also contain
-    any other variables specified in user_prompt_variables.
-    """
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": text},
-    ]
-
-
 class SendToAI:
     client: Instructor
 
     def __init__(self):
-        api_key = os.environ["OPEN_AI_KEY"]
-        self.client = from_openai(OpenAI(api_key=api_key))
+        self.client = ai_client
 
     def process_single_grant(self, grant: Grant) -> GrantAnalysis:
         try:
@@ -76,7 +61,7 @@ class SendToAI:
                 text = grant.raw_text.decode("utf-8")
             else:
                 text = grant.raw_text
-            messages = format_for_llm(text)
+            messages = format_for_llm(SYSTEM_PROMPT, text)
             logger.info(f"Processing grant: {grant.id}")
             results = self.client.chat.completions.create(
                 model=MODEL,

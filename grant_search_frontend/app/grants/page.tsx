@@ -1,0 +1,212 @@
+'use client';
+
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Table, Select, Space, Button, Input, Collapse } from "antd";
+import type { ColumnsType } from 'antd/es/table';
+
+interface Grant {
+  id: string;
+  title: string;
+  agency: string;
+  datasource: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+}
+
+export default function Grants(): React.ReactElement {
+  const [grants, setGrants] = useState<Grant[]>([]);
+  const [agencies, setAgencies] = useState<{id: number, name: string}[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    agency: '',
+    datasource: '',
+    text: ''
+  });
+
+  const columns: ColumnsType<Grant> = [
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: 'Agency',
+      dataIndex: 'agency',
+      key: 'agency',
+    },
+    {
+      title: 'Data Source',
+      dataIndex: 'datasource',
+      key: 'datasource',
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number) => `$${amount.toLocaleString()}`,
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'endDate',
+      key: 'endDate',
+    },
+   ];
+
+
+  useEffect(() => {
+    const fetchGrants = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get('/api/grants', { params: filters });
+        setGrants(response.data);
+      } catch (error) {
+        console.error('Error fetching grants:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchGrants();
+  }, [filters]);
+
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await axios.get('/api/agencies');
+        setAgencies(response.data);
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      }
+    };
+
+    fetchAgencies();
+  }, []);
+
+  const [dataSources, setDataSources] = useState([]);
+
+  useEffect(() => {
+    const fetchDataSources = async () => {
+      try {
+        const response = await axios.get('/api/datasources');
+        setDataSources(response.data);
+      } catch (error) {
+        console.error('Error fetching data sources:', error);
+      }
+    };
+
+    fetchDataSources();
+  }, []);
+
+  return (
+    <div style={{ margin: '40px 20px' }}>
+      <h1>Grants</h1>
+      <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
+        <Input.TextArea 
+          placeholder="Describe the grants you're looking for..." 
+          rows={3}
+          value={filters.text}
+          onChange={(e) => setFilters(prev => ({ ...prev, text: e.target.value }))}
+        />
+                <Button
+          type="primary"
+          onClick={() => {
+            const fetchGrantsByText = async () => {
+              setLoading(true);
+              try {
+                const response = await axios.post('/api/grants_by_text', { 
+                  text: filters.text 
+                });
+                setGrants(response.data);
+              } catch (error) {
+                console.error('Error fetching grants by text:', error);
+              } finally {
+                setLoading(false);
+              }
+            };
+            fetchGrantsByText();
+          }}
+        >
+          Search
+        </Button>
+
+        <Collapse style={{ marginBottom: 16 }}>
+          <Collapse.Panel header="Search Examples" key="1">
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li>Find grants about organ donation that end after January 2024</li>
+              <li>Show me NIH grants related to cancer research</li>
+              <li>Find grants from the NSF about renewable energy</li>
+              <li>Find grants awarded to &quot;Mandoye Ndoye&quot; related to DEI</li>
+              <li>Show grants focused on DEI initiatives with budgets over $100,000</li>
+              <li>Find NSF grants about artificial intelligence from datasourde NSF 2024</li>
+            </ul>
+          </Collapse.Panel>
+        </Collapse>
+      </Space>
+{/* 
+      <Space style={{ marginBottom: 16 }}>
+        <Select
+          style={{ width: 200 }}
+          placeholder="Filter by Agency"
+          allowClear
+          onChange={(value) => setFilters(prev => ({ ...prev, agency: value }))}
+        >
+          {agencies.map(agency => (
+            <Select.Option key={agency.id} value={agency.id}>
+              {agency.name}
+            </Select.Option>
+          ))}
+        </Select>
+
+        <Select
+          style={{ width: 200 }}
+          placeholder="Filter by Data Source"
+          allowClear
+          onChange={(value) => setFilters(prev => ({ ...prev, datasource: value }))}
+        >
+          {dataSources.map(datasource => (
+            <Select.Option key={datasource.id} value={datasource.id}>
+              [{datasource.agency_name}] {datasource.name}
+            </Select.Option>
+          ))}
+        </Select>
+        <Button 
+          type="primary"
+          onClick={() => {
+            const fetchGrants = async () => {
+              setLoading(true);
+              try {
+                const response = await axios.get('/api/grants', { params: filters });
+                setGrants(response.data);
+              } catch (error) {
+                console.error('Error fetching grants:', error);
+              } finally {
+                setLoading(false);
+              }
+            };
+            fetchGrants();
+          }}
+        >
+          Search
+        </Button> 
+      </Space>*/}
+      <div style={{ marginBottom: 16, fontWeight: 'bold' }}>
+          Total Amount: ${grants.reduce((sum, grant) => sum + (grant.amount || 0), 0).toLocaleString()}
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={grants}
+        loading={loading}
+        rowKey="id"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Total ${total} items`,
+        }}
+      />
+    </div>
+  );
+} 

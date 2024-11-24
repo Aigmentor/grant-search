@@ -2,10 +2,10 @@ import logging
 import unittest
 from unittest.mock import patch
 from datetime import datetime, timedelta
-from cleanmail.db.models import GoogleUser
-from cleanmail.gmail import api as gmail_api
-from cleanmail.gmail.scan import compute_sender_stats, scan
-import cleanmail.db.database as database
+from grant_search.db.models import GoogleUser
+from grant_search.gmail import api as gmail_api
+from grant_search.gmail.scan import compute_sender_stats, scan
+import grant_search.db.database as database
 
 logging.basicConfig(level=logging.INFO)
 

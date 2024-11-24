@@ -1,2 +1,2 @@
 web: flask --app grant_search.web.app:app --debug run
-worker: python -m grant_search.worker.dispatcher
+# worker: python -m grant_search.worker.dispatcher
