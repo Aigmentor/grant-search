@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CleanMail",
-  description: "Cleans your gmail- delete 98% of your emails in a few clicks",
+  title: "Grant Search AI",
+  description: "Search government grants with AI",
 };
 
 export default function RootLayout({

@@ -1,4 +1,4 @@
-# cleanmail
+# grant_search
 
 ## To Run locally:
 ### Setup environment
@@ -18,7 +18,7 @@ POSTGRES_URL=[Postgres URL from neon]
 1. start Heroku:
 `heroku local -f Procfile.local`
 2. start local next.js:
-`cd cleanmail-frontend && npm run dev`
+`cd grant_search-frontend && npm run dev`
 
 
 ## Updating dependencies
