@@ -6,8 +6,8 @@ import traceback
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from cleanmail.db.database import get_scoped_session
-from cleanmail.db.models import (
+from grant_search.db.database import get_scoped_session
+from grant_search.db.models import (
     AddressStats,
     GmailSender,
     GmailThread,
@@ -114,7 +114,7 @@ def compute_stats_for_sender(session: Session, sender_id: int):
                     logging.warning(
                         f"splitting {address.email}: {importance} vs {top_level_importance}"
                     )
-                    from cleanmail.gmail.scan import split_address
+                    from grant_search.gmail.scan import split_address
 
                     split_address(session, address, SenderStatus.NONE)
                     # Return immediately, because split_address will call compute_stats again

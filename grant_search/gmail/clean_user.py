@@ -2,18 +2,18 @@ from concurrent.futures import ThreadPoolExecutor
 import datetime
 import logging
 from typing import List
-from cleanmail.db.models import (
+from grant_search.db.models import (
     DELETED_LABEL,
     GmailSender,
     GmailThread,
     GoogleUser,
     SenderStatus,
 )
-from cleanmail.db.database import get_scoped_session, get_scoped_session, get_session
-import cleanmail.gmail.api as gmail_api
+from grant_search.db.database import get_scoped_session, get_scoped_session, get_session
+import grant_search.gmail.api as gmail_api
 from sqlalchemy import or_
 
-from cleanmail.gmail.stats import compute_stats
+from grant_search.gmail.stats import compute_stats
 
 _MAX_CLEAN_THREADS = 8
 

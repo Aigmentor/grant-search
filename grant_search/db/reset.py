@@ -1,7 +1,7 @@
 from alembic.config import Config
 from alembic import command
-from cleanmail.db.models import Base
-from cleanmail.db.database import engine, get_session
+from grant_search.db.models import Base, init_db
+from grant_search.db.database import engine, get_session
 
 
 def reset():
@@ -9,6 +9,7 @@ def reset():
     # Drop all tables
     Base.metadata.drop_all(engine)
 
+    init_db()
     # Recreate all tables
     Base.metadata.create_all(engine)
 

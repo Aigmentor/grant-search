@@ -5,8 +5,8 @@ import logging
 from time import sleep
 from typing import List
 
-from cleanmail import common
-from cleanmail.gmail.api import exec_with_rate_limit, list_thread_ids_by_query
+from grant_search import common
+from grant_search.gmail.api import exec_with_rate_limit, list_thread_ids_by_query
 
 MAX_PROCESS_EMAIL_THREADS = (
     7 if common.get_mode() == common.MODE_ENUM.PRODUCTION else 10

@@ -31,7 +31,7 @@ Note that on Heroky none of the "development" dependencies are installed, so if 
 
 ### Database upgrades
 TO reset the DB:
-`python -m cleanmail.db.reset`
+`python -m grant_search.db.reset`
 
 To create an upgrade script:
 `alembic revision --autogenerate -m "UPGRADE DESCRIPTION"`

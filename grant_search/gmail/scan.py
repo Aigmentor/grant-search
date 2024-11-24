@@ -8,9 +8,9 @@ import re
 import sys
 import threading
 from typing import Optional
-from cleanmail import common
-from cleanmail.db.database import get_scoped_session, get_session
-from cleanmail.db.models import (
+from grant_search import common
+from grant_search.db.database import get_scoped_session, get_session
+from grant_search.db.models import (
     GmailSender,
     GmailSenderAddress,
     GoogleUser,
@@ -18,9 +18,9 @@ from cleanmail.db.models import (
     SenderStatus,
     DELETED_LABEL,
 )
-from cleanmail.gmail import api as gmail_api
-from cleanmail.gmail import stats
-from cleanmail.gmail.parallel_list import list_thread_ids_by_query_in_parallel
+from grant_search.gmail import api as gmail_api
+from grant_search.gmail import stats
+from grant_search.gmail.parallel_list import list_thread_ids_by_query_in_parallel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
