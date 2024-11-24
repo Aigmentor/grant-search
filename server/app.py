@@ -6,7 +6,7 @@ from grant_search.common import MODE_ENUM, get_mode
 import grant_search.db.models as db
 import grant_search.web.web_api as web_api
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 if get_mode() == MODE_ENUM.LOCAL:
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
