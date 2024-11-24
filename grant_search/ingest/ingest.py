@@ -14,6 +14,7 @@ import ssl
 
 from grant_search.db.models import Agency, DataSource, Grant, Grantee
 from grant_search.db.database import Session
+from grant_search.ingest.send_to_ai import SendToAI
 
 
 logging.basicConfig(
@@ -108,9 +109,11 @@ class Ingester:
         with zipfile.ZipFile(file_content, "r") as zip_ref:
             zip_ref.extractall(temp_dir)
 
+        i = 0
         # Walk through all files in temp directory
         for root, dirs, files in os.walk(temp_dir):
             for file in files:
+                i += 1
                 file_path = os.path.join(root, file)
                 with open(file_path, "rt") as f:
                     self.process_file(file_path, f.read())
@@ -214,10 +217,29 @@ class Ingester:
 
         self.process_file(filename, file_content)
 
+        # Process grants through AI after ingestion
+
+        logger.info("Processing grants through AI...")
+        with Session() as session:
+            grants = (
+                session.query(Grant)
+                .filter(Grant.data_source_id == self.data_source.id)
+                .all()
+            )
+
+            if grants:
+                ai_processor = SendToAI()
+                ai_processor.process_grants(grants)
+                logger.info(f"Processed {len(grants)} grants through AI")
+            else:
+                logger.warn("No grants found to process through AI")
+
 
 if __name__ == "__main__":
     import argparse
+    from dotenv import load_dotenv
 
+    load_dotenv()
     parser = argparse.ArgumentParser(description="Ingest grant data from a URL or file")
     parser.add_argument("--input_url", help="URL or path to input file", required=True)
     parser.add_argument("--source_name", help="short name for source", required=True)
