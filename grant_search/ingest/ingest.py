@@ -124,7 +124,7 @@ class Ingester:
             data = xml_to_dict(tree)
             # For NSF data:
             award = data["Award"]
-            award_id = data["AwardID"]
+            award_id = award["AwardID"]
             title = award["AwardTitle"]
             start_date = datetime.strptime(award["AwardEffectiveDate"], "%m/%d/%Y")
             end_date = datetime.strptime(award["AwardExpirationDate"], "%m/%d/%Y")
