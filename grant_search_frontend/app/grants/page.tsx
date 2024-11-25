@@ -155,6 +155,41 @@ export default function Grants(): React.ReactElement {
 
     return () => clearInterval(intervalId);
   }, [queryId]);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout;
+
+    if (loading) {
+      setProgress(0);
+      progressInterval = setInterval(() => {
+        setProgress((prevProgress) => {
+          if (prevProgress >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prevProgress + (100/45);
+        });
+      }, 1000);
+    } else {
+      setProgress(0);
+    }
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [loading]);
+
+  const progressBarStyle = {
+    height: '4px',
+    backgroundColor: '#1890ff',
+    width: `${progress}%`,
+    transition: 'width 1s linear',
+    marginBottom: '20px',
+    display: loading ? 'block' : 'none'
+  };
 
   return (
     <div style={{ margin: '40px 20px' }}>
@@ -186,8 +221,10 @@ export default function Grants(): React.ReactElement {
             fetchGrantsByText();
           }}
         >
-          Search
+        {loading ? 'Searching...' : 'Search'}
         </Button>
+        
+        <div style={progressBarStyle}></div>
 
         <Collapse style={{ marginBottom: 16 }}>
           <Collapse.Panel header="Search Examples" key="1">
