@@ -16,6 +16,7 @@ interface Grant {
   awardUrl: string;
 }
 
+let downloadedGrants: Grant[] = [];
 const columns: ColumnsType<Grant> = [
   {
     title: 'Afuera',
@@ -135,6 +136,7 @@ const columns: ColumnsType<Grant> = [
  ];
 
 export default function Grants(): React.ReactElement {
+  const [queryStatus, setQueryStatus] = useState(undefined);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [samplingFraction, setSamplingFraction] = useState(1.0);
   const [agencies, setAgencies] = useState<{id: number, name: string}[]>([]);
@@ -182,16 +184,24 @@ export default function Grants(): React.ReactElement {
     const pollQueryStatus = async () => {
       try {
         const response = await axios.post('/api/grants_query_status', {
-          queryId: queryId
+          queryId: queryId,
+          startIndex: downloadedGrants.length
         });
-
-        if (response.data.status === 'success') {
+        
+        setQueryStatus(response.data.status == 'in_progress'? 'streaming results...': response.data.status);
+        const inProgress = response.data.status === 'in_progress' && response.data.results;
+        const success = response.data.status === 'success';
+        if (success || inProgress) {
           console.log('grants', response.data.results);
-          setGrants(response.data.results);
+          downloadedGrants.push(...response.data.results);
+          setGrants(downloadedGrants.slice(0));
           console.log('samplingFraction', response.data.sampleFraction);
           setSamplingFraction(response.data.sampleFraction);
-          setQueryId(undefined);
-          setLoading(false);
+          if (success) {
+            downloadedGrants = [];
+            setQueryId(undefined);
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error polling query status:', error);
@@ -255,6 +265,7 @@ export default function Grants(): React.ReactElement {
           type="primary"
           onClick={() => {
             const fetchGrantsByText = async () => {
+              setQueryStatus("Queuing");
               setLoading(true);
               try {
                 const response = await axios.post('/api/grants_by_text', { 
@@ -274,7 +285,14 @@ export default function Grants(): React.ReactElement {
         {loading ? 'Searching...' : 'Search'}
         </Button>
         
-        <div style={progressBarStyle}></div>
+        <div style={{ position: 'relative', marginBottom: '20px' }}>
+          {loading && (
+            <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '-20px', fontSize: '12px', color: '#666' }}>
+              {queryStatus.toUpperCase()}
+            </div>
+          )}
+          <div style={progressBarStyle}></div>
+        </div>
 
         <Collapse style={{ marginBottom: 16 }}>
           <Collapse.Panel header="Search Examples" key="1">
@@ -346,7 +364,7 @@ export default function Grants(): React.ReactElement {
       <Table
         columns={columns}
         dataSource={grants}
-        loading={loading}
+        loading={!grants ||grants.length === 0}
         rowKey="id"
         pagination={{
           pageSize: 10,

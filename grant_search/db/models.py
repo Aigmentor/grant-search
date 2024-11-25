@@ -22,6 +22,8 @@ from sqlalchemy import (
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, mapped_column, Mapped, deferred
+from sqlalchemy.orm import declarative_mixin
+from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 
@@ -34,6 +36,13 @@ def init_db():
     create_vector_extension = DDL("CREATE EXTENSION IF NOT EXISTS vector")
     event.listen(Base.metadata, "before_create", create_vector_extension)
     Base.metadata.create_all(database.engine)
+
+
+class TimestampMixin:
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_modified = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
 
 class Agency(Base):
@@ -150,7 +159,7 @@ grant_search_query_grants = Table(
 )
 
 
-class GrantSearchQuery(Base):
+class GrantSearchQuery(TimestampMixin, Base):
     __tablename__ = "grant_search_queries"
     id = Column(Integer, primary_key=True)
     query = Column(String)
@@ -159,3 +168,4 @@ class GrantSearchQuery(Base):
     reasons = Column(ARRAY(String))
     complete = Column(Boolean)
     sampling_fraction = Column(Float)
+    status = Column(String)

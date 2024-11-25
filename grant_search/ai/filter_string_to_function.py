@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 import random
 import traceback
-from typing import List, Optional, Tuple
+from typing import Generator, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from datetime import datetime
 import logging
@@ -10,6 +10,7 @@ import logging
 from sqlalchemy.orm import undefer
 
 from grant_search.ai.common import ai_client, format_for_llm
+from grant_search.db.database import get_session
 from grant_search.db.models import (
     Agency,
     DataSource,
@@ -156,13 +157,23 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[bool, str]:
         )
         return result.result, result.reason
     except Exception as e:
-        logger.error(f"Error filtering grant {grant.id}: {e}")
+        logger.error(f"Error filtering grant {e}")
         return False, "Error"
 
 
-def query_by_text(session, query: GrantSearchQuery) -> List[Tuple[Grant, str]]:
+def query_by_text(
+    session, query: GrantSearchQuery
+) -> Generator[Tuple[Grant, str], None, None]:
+    writing_session = get_session()
+    query.status = "parsing_query"
+    session.commit()
+    session.refresh(query)
     search_function = _get_search_function(query.query)
-    grants = _filter_grants_from_linear(session=session, lsf=search_function)
+    query.status = "reading_grants"
+    session.commit()
+    session.refresh(query)
+    query_session = get_session()
+    grants = _filter_grants_from_linear(session=query_session, lsf=search_function)
 
     if len(grants) > 500:
         logger.info(f"Sampling down from {len(grants)} to 500 grants")
@@ -172,8 +183,10 @@ def query_by_text(session, query: GrantSearchQuery) -> List[Tuple[Grant, str]]:
         sampling_fraction = 1.0
 
     query.sampling_fraction = sampling_fraction
+    query.status = "sending_to_ai"
     session.commit()
-    filtered_grants = []
+    session.refresh(query)
+
     with ThreadPoolExecutor(max_workers=200) as executor:
         # Create list of futures for each grant query
         logging.info(f"{len(grants)} grants to scan")
@@ -183,6 +196,11 @@ def query_by_text(session, query: GrantSearchQuery) -> List[Tuple[Grant, str]]:
             )
             for grant in grants
         ]
+        query.status = "waiting_for_ai"
+        session.commit()
+        session.begin()
+        session.refresh(query)
+        logging.info(f"Submitted {len(grants)} for analysis")
         # Process results as they complete
         for i, (grant, future) in enumerate(zip(grants, futures)):
             try:
@@ -190,13 +208,7 @@ def query_by_text(session, query: GrantSearchQuery) -> List[Tuple[Grant, str]]:
                 if included:
                     # reference grant.data_source.gency totrigger a load
                     grant.data_source.agency
-                    filtered_grants.append((grant, reason))
-
-                if i % 100 == 99:
-                    logging.info(f"Processed {i+1} grants")
+                    yield ((grant, reason))
             except Exception as e:
                 logger.error(f"Stack trace:\n{traceback.format_exc()}")
                 logger.error(f"Error processing grant {grant.id}: {e}")
-
-    logger.info(f"Filtered down to {len(filtered_grants)} grants")
-    return filtered_grants

@@ -11,32 +11,25 @@ from grant_search.db.models import Grant, GrantSearchQuery
 logger = logging.getLogger(__name__)
 
 
-class QueryThread:
-    id: int
-
-    def __init__(self, query: str):
-        global query_thread_id
-        self.query = query
-        self.id = query_thread_id
-        self.results = None
-
-        query_thread_id += 1
-        Thread(target=self.run_query, daemon=True).start()
-
-    def is_done(self):
-        return self.results is not None
-
-    def run_query(self):
-        with get_session() as session:
-            self.results = query_by_text(session, self.query)
-
-
 def _run_query(query_id: int):
     with get_session() as session:
         grant_search_query = session.query(GrantSearchQuery).get(query_id)
         results = query_by_text(session, grant_search_query)
-        grant_search_query.grants = [result for result, _ in results]
-        grant_search_query.reasons = [reason for _, reason in results]
+        grants = []
+        reasons = []
+        for i, (result, reason) in enumerate(results):
+            result = session.query(Grant).get(result.id)
+            grants.append(result)
+            reasons.append(reason)
+            grant_search_query.grants = grants
+            grant_search_query.reasons = reasons
+            if i % 100 == 99 or i == 5:
+                session.add(grant_search_query)
+                logging.info(f"Processed {i+1} grants")
+                session.commit()
+                session.begin()
+                session.refresh(grant_search_query)
+
         grant_search_query.complete = True
         session.commit()
 

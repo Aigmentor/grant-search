@@ -97,19 +97,35 @@ def get_grants_query_status():
     if not request_data or "queryId" not in request_data:
         return jsonify({"error": "Missing queryId parameter"}), 400
 
+    start_index = request_data.get("startIndex", 0)
+
     with get_session() as session:
-        query = session.query(GrantSearchQuery).get(request_data["queryId"])
+        query = (
+            session.query(GrantSearchQuery)
+            .populate_existing()
+            .get(request_data["queryId"])
+        )
         if query is None:
             return jsonify({"error": f"No such query: {request_data['queryId']}"}), 400
 
-        if not query.complete:
-            return jsonify({"status": "in_progress"}), 200
+        if query.reasons is None and not query.complete:
+            return (
+                jsonify(
+                    {
+                        "status": query.status,
+                        "sampleFraction": query.sampling_fraction,
+                        "results": [],
+                    }
+                ),
+                200,
+            )
 
         results = zip(query.grants, query.reasons)
+
         output = []
+        # Skip entries before start_index
+        results = list(results)[start_index:]
         for result in results:
-            if len(result) != 2:
-                logging.info(f"len: {len(result)} {result}")
             grant, reason = result
             data_source = grant.data_source
             output.append(
@@ -130,7 +146,7 @@ def get_grants_query_status():
         return (
             jsonify(
                 {
-                    "status": "success",
+                    "status": "success" if query.complete else "in_progress",
                     "sampleFraction": query.sampling_fraction,
                     "results": output,
                 }

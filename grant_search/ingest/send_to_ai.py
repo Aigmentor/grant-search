@@ -18,7 +18,8 @@ class GrantAnalysis(BaseModel):
     dei: bool = Field(
         description="""
         Set to true if the title/description mention things related to DEI, such as
-        PoCs, Women, gay or trans. 
+        PoCs, Women, gay or trans. Note just the word "diverse" or "diversity" or "women"
+        is not enough to set this to true.
         """,
     )
     primary_dei: bool = Field(
