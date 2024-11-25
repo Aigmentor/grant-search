@@ -5,8 +5,8 @@ import traceback
 from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
 
-from grant_search.ai.query_processor import QueryProcessor
-from grant_search.db.models import Grant, Agency, DataSource
+from grant_search.ai.query_processor import create_query
+from grant_search.db.models import Grant, Agency, DataSource, GrantSearchQuery
 from grant_search.db.database import get_session
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.filter_grants import filter_grants_query
@@ -14,8 +14,6 @@ from grant_search.ingest.ingest import Ingester
 
 # XHR API for web app
 api = Blueprint("api", __name__)
-
-query_processor = QueryProcessor()
 
 
 @api.route("/upload_datasource", methods=["POST"])
@@ -89,7 +87,7 @@ def get_grants_by_text():
 
     with get_session() as session:
         # Query grants using the text filter
-        query_id = query_processor.process_query(text)
+        query_id = create_query(text)
         return jsonify({"queryId": query_id})
 
 
@@ -99,10 +97,15 @@ def get_grants_query_status():
     if not request_data or "queryId" not in request_data:
         return jsonify({"error": "Missing queryId parameter"}), 400
 
-    results = query_processor.get_results(request_data["queryId"])
-    if results is None:
-        return jsonify({"status": "in_progress"}), 200
-    else:
+    with get_session() as session:
+        query = session.query(GrantSearchQuery).get(request_data["queryId"])
+        if query is None:
+            return jsonify({"error": f"No such query: {request_data['queryId']}"}), 400
+
+        if not query.complete:
+            return jsonify({"status": "in_progress"}), 200
+
+        results = zip(query.grants, query.reasons)
         output = []
         for result in results:
             if len(result) != 2:

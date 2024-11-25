@@ -1,5 +1,6 @@
 from typing import Type, TypeVar
 from sqlalchemy import (
+    ARRAY,
     JSON,
     DDL,
     VARCHAR,
@@ -138,3 +139,22 @@ class GrantEmbedding(Base):
             "grant_id",
         ),
     )
+
+
+# Add this association table before the GrantSearchQuery class
+grant_search_query_grants = Table(
+    "grant_search_query_grants",
+    Base.metadata,
+    Column("grant_search_query_id", Integer, ForeignKey("grant_search_queries.id")),
+    Column("grant_id", Integer, ForeignKey("grants.id")),
+)
+
+
+class GrantSearchQuery(Base):
+    __tablename__ = "grant_search_queries"
+    id = Column(Integer, primary_key=True)
+    query = Column(String)
+    timestamp = Column(DateTime)
+    grants = relationship("Grant", secondary="grant_search_query_grants")
+    reasons = Column(ARRAY(String))
+    complete = Column(Boolean)
