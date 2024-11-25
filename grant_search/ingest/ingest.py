@@ -130,6 +130,8 @@ class Ingester:
             end_date = datetime.strptime(award["AwardExpirationDate"], "%m/%d/%Y")
             amount = award["AwardAmount"]
             description = award["AbstractNarration"]
+            if description is None or len(description) == 0:
+                description = "No description provided"
             investigators = award["Investigator"]
             if type(investigators) != list:
                 investigators = [investigators]
