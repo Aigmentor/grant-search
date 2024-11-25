@@ -11,7 +11,7 @@ export default function Home() : React.ReactElement {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      await axios.post('/api/datasource', values);
+      await axios.post('/api/upload_datasource', values);
       form.resetFields();
     } catch (error) {
       console.error('Error creating datasource:', error);
@@ -42,17 +42,15 @@ export default function Home() : React.ReactElement {
           rules={[{ required: true, message: 'Please select the datasource type!' }]}
         >
           <Select placeholder="Select datasource type">
-            <Select.Option value="gmail">Gmail</Select.Option>
-            <Select.Option value="calendar">Calendar</Select.Option>
-            <Select.Option value="tasks">Tasks</Select.Option>
+            <Select.Option value="NSF" default>NSF</Select.Option>
           </Select>
         </Form.Item>
 
         <Form.Item
-          label="Description" 
-          name="description"
+          label="Source URL" 
+          name="sourceUrl"
         >
-          <Input.TextArea placeholder="Enter description" />
+          <Input.TextArea placeholder="https://www.grants.gov/web/grants/..." />
         </Form.Item>
 
         <Form.Item>

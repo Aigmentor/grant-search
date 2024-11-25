@@ -10,11 +10,32 @@ from grant_search.db.models import Grant, Agency, DataSource
 from grant_search.db.database import get_session
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.filter_grants import filter_grants_query
+from grant_search.ingest.ingest import Ingester
 
 # XHR API for web app
 api = Blueprint("api", __name__)
 
 query_processor = QueryProcessor()
+
+
+@api.route("/upload_datasource", methods=["POST"])
+def upload_datasource():
+    """Create a new datasource from form parameters"""
+    request_data = request.get_json()
+    if not request_data:
+        return jsonify({"error": "Missing request data"}), 400
+
+    name = request_data.get("name")
+    agency_name = request_data.get("agency")
+    input_url = request_data.get("sourceUrl")
+
+    if not name or not agency_name:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    ingester = Ingester(source_name=name, agency=agency_name, source=input_url)
+    Thread(target=ingester.ingest).start()
+
+    return jsonify({"success": True}), 200
 
 
 @api.route("/datasources", methods=["GET"])
