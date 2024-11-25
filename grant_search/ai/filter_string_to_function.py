@@ -121,7 +121,7 @@ def _filter_grants_from_linear(
         if agency_result:
             agency_id = agency_result.id
             query = query.join(DataSource, Grant.data_source_id == DataSource.id)
-        query = query.filter(DataSource.agency_id == agency_id)
+            query = query.filter(DataSource.agency_id == agency_id)
 
     if lsf.start_date_before:
         query = query.filter(Grant.start_date <= lsf.start_date_before)
