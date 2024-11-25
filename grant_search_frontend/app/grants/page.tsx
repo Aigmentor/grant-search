@@ -103,7 +103,9 @@ const columns: ColumnsType<Grant> = [
     title: 'Amount',
     dataIndex: 'amount',
     key: 'amount',
-    render: (amount: number) => `$${amount.toLocaleString()}`,
+    defaultSortOrder: 'descend',
+    sorter: (a: Grant, b: Grant) => (a.amount || 0) - (b.amount || 0),
+    render: (amount: number) => `$${amount?.toLocaleString() || 'N/A'}`,
   },
   {
     title: 'End Date',
