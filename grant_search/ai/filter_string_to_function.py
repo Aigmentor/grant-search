@@ -1,13 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
 import traceback
-from typing import Optional
+from typing import List, Optional, Tuple
 from instructor import from_openai
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from datetime import datetime
 import logging
+
 from grant_search.ai.common import ai_client, format_for_llm
+from grant_search.db.models import Grant
 from grant_search.filter_grants import filter_grants_from_ai
 
 logging.getLogger("instructor").setLevel(logging.WARNING)
@@ -67,23 +69,27 @@ def _get_search_function(text: str) -> SearchFunction:
     )
 
 
-def filter_grants_by_query(user_query: str, grant_description: str) -> bool:
+def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[bool, str]:
     prompt = f"""
     You are answering this question: `{user_query}`
     You will be given a grant description. Use that to answer this question with
     True/False in the `results` field.
     The response must be in JSON format.
     """
-    messages = format_for_llm(prompt, f'grant_description: \n"{grant_description}"')
-    result = ai_client.chat.completions.create(
-        model=FILTER_MODEL,
-        messages=messages,
-        response_model=GrantFilter,
-    )
-    return result.result
+    try:
+        messages = format_for_llm(prompt, f'grant_description: \n"{grant.raw_text}"')
+        result = ai_client.chat.completions.create(
+            model=FILTER_MODEL,
+            messages=messages,
+            response_model=GrantFilter,
+        )
+        return result.result, result.reason
+    except Exception as e:
+        logger.error(f"Error filtering grant {grant.id}: {e}")
+        return False, "Error"
 
 
-def query_by_text(session, text: str):
+def query_by_text(session, text: str) -> List[Tuple[Grant, str]]:
     search_function = _get_search_function(text)
     grants = filter_grants_from_ai(
         session=session,
@@ -96,20 +102,26 @@ def query_by_text(session, text: str):
     logger.info(f"Found {len(grants)} grants")
 
     filtered_grants = []
-    with ThreadPoolExecutor(max_workers=80) as executor:
+    with ThreadPoolExecutor(max_workers=120) as executor:
         # Create list of futures for each grant query
         futures = [
             executor.submit(
-                filter_grants_by_query, search_function.grant_question, grant.raw_text
+                filter_grants_by_query, search_function.grant_question, grant
             )
             for grant in grants
         ]
-
+        logging.info(f"{len(futures)} grants to scan")
         # Process results as they complete
-        for grant, future in zip(grants, futures):
+        for i, (grant, future) in enumerate(zip(grants, futures)):
             try:
-                if future.result():
-                    filtered_grants.append(grant)
+                included, reason = future.result()
+                if included:
+                    # reference grant.data_source.gency totrigger a load
+                    grant.data_source.agency
+                    filtered_grants.append((grant, reason))
+
+                if i % 100 == 99:
+                    logging.info(f"Processed {i+1} grants")
             except Exception as e:
                 logger.error(f"Stack trace:\n{traceback.format_exc()}")
                 logger.error(f"Error processing grant {grant.id}: {e}")

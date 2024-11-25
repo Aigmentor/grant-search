@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from sqlalchemy import and_
-from sqlalchemy.orm import Query
+from sqlalchemy.orm import Query, undefer
 
 from grant_search.db.models import Agency, Grant, DataSource
 
@@ -67,7 +67,7 @@ def filter_grants_query(
     Returns:
         Filtered SQLAlchemy query
     """
-    query = session.query(Grant)
+    query = session.query(Grant).options(undefer(Grant.raw_text))
 
     if start_date:
         query = query.filter(Grant.start_date >= start_date)

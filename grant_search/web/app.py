@@ -11,6 +11,8 @@ from grant_search.db.database import get_session
 import grant_search.web.web_api as web_api
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 if get_mode() == MODE_ENUM.LOCAL:
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"

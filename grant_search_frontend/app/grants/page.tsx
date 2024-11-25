@@ -15,10 +15,59 @@ interface Grant {
   status: string;
 }
 
+const columns: ColumnsType<Grant> = [
+  {
+    title: 'Title',
+    dataIndex: 'title',
+    key: 'title',
+  },
+  {
+    title: 'Agency',
+    dataIndex: 'agency',
+    key: 'agency',
+  },
+  {
+    title: 'Data Source',
+    dataIndex: 'datasource',
+    key: 'datasource',
+  },
+  {
+    title: 'Amount',
+    dataIndex: 'amount',
+    key: 'amount',
+    render: (amount: number) => `$${amount.toLocaleString()}`,
+  },
+  {
+    title: 'End Date',
+    dataIndex: 'endDate',
+    key: 'endDate',
+  },
+  {
+    title: 'Description',
+    dataIndex: 'description',
+    key: 'description',
+    render: (description: string) => (
+      <Collapse ghost>
+        <Collapse.Panel 
+          header={description?.substring(0, 50) + '...'} 
+          key="1"
+        >
+          {description}
+        </Collapse.Panel>
+      </Collapse>
+    ),
+  },
+  {
+    title: 'Reason',
+    dataIndex: 'reason',
+    key: 'reason',
+  },
+ ];
+
 export default function Grants(): React.ReactElement {
   const [grants, setGrants] = useState<Grant[]>([]);
   const [agencies, setAgencies] = useState<{id: number, name: string}[]>([]);
-
+  const [queryId, setQueryId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     agency: '',
@@ -26,51 +75,6 @@ export default function Grants(): React.ReactElement {
     text: ''
   });
 
-  const columns: ColumnsType<Grant> = [
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-    },
-    {
-      title: 'Agency',
-      dataIndex: 'agency',
-      key: 'agency',
-    },
-    {
-      title: 'Data Source',
-      dataIndex: 'datasource',
-      key: 'datasource',
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: number) => `$${amount.toLocaleString()}`,
-    },
-    {
-      title: 'End Date',
-      dataIndex: 'endDate',
-      key: 'endDate',
-    },
-   ];
-
-
-  useEffect(() => {
-    const fetchGrants = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('/api/grants', { params: filters });
-        setGrants(response.data);
-      } catch (error) {
-        console.error('Error fetching grants:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    fetchGrants();
-  }, [filters]);
 
   useEffect(() => {
     const fetchAgencies = async () => {
@@ -100,6 +104,34 @@ export default function Grants(): React.ReactElement {
     fetchDataSources();
   }, []);
 
+  useEffect(() => {
+    console.log('queryId', queryId);
+    if (queryId === undefined) return;
+
+    const pollQueryStatus = async () => {
+      try {
+        const response = await axios.post('/api/grants_query_status', {
+          queryId: queryId
+        });
+
+        if (response.data.status === 'success') {
+          console.log('grants', response.data.results);
+          setGrants(response.data.results);
+          setQueryId(undefined);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error polling query status:', error);
+        setLoading(false);
+        setQueryId(undefined);
+      }
+    };
+
+    const intervalId = setInterval(pollQueryStatus, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [queryId]);
+
   return (
     <div style={{ margin: '40px 20px' }}>
       <h1>Grants</h1>
@@ -119,10 +151,10 @@ export default function Grants(): React.ReactElement {
                 const response = await axios.post('/api/grants_by_text', { 
                   text: filters.text 
                 });
-                setGrants(response.data);
+                setQueryId(response.data.queryId);
+                setGrants([]);
               } catch (error) {
                 console.error('Error fetching grants by text:', error);
-              } finally {
                 setLoading(false);
               }
             };
