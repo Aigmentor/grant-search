@@ -81,6 +81,7 @@ grant_grantee = Table(
 class Grant(Base):
     __tablename__ = "grants"
     id = Column(Integer, primary_key=True)
+    award_id = Column(String)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     amount = Column(Float)
@@ -105,6 +106,9 @@ class Grant(Base):
     embeddings = relationship(
         "GrantEmbedding", back_populates="grant", cascade="all, delete-orphan"
     )
+
+    def get_award_url(self):
+        return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID=${self.award_id}&HistoricalAwards=false"
 
 
 class GrantDerivedData(Base):

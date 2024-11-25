@@ -13,6 +13,7 @@ interface Grant {
   amount: number;
   dueDate: string;
   status: string;
+  awardUrl: string;
 }
 
 const columns: ColumnsType<Grant> = [
@@ -20,6 +21,13 @@ const columns: ColumnsType<Grant> = [
     title: 'Title',
     dataIndex: 'title',
     key: 'title',
+    render: (title: string, record: Grant) => (
+      <span> {title}
+      <a href={record.awardUrl} target="_blank" rel="noopener noreferrer">
+        [link]
+      </a>
+      </span>
+    ),
   },
   {
     title: 'Agency',

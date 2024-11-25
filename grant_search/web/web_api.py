@@ -98,6 +98,7 @@ def get_grants_query_status():
                     "endDate": grant.end_date.strftime("%Y-%m-%d"),
                     "description": grant.description,
                     "reason": reason,
+                    "awardUrl": grant.get_award_url(),
                 }
             )
 
