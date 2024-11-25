@@ -23,7 +23,55 @@ const columns: ColumnsType<Grant> = [
     render: () => (
       <Button
         type="primary"
-        onClick={() => window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')}
+        onClick={() => {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          `;
+          const image = Math.random() < 0.5 ? "/static/javier-chainsaw.gif" : "/static/javier-milei-afuera.gif"
+
+          overlay.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; background: white; border-radius: 8px;">
+              <img 
+                width="500" 
+                src="${image}"
+                alt="Javier Milei gif"
+              />
+              <div style="display: flex; gap: 10px;">
+                <button 
+                  style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
+                  onclick="window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')"
+                >
+                  DOGE
+                </button>
+                <button
+                  style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
+                  onclick="this.closest('.overlay').remove()"
+                >
+                  Sorry, I like waste
+                </button>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(overlay);
+          overlay.className = 'overlay';
+          
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+              overlay.remove();
+            }
+          });
+        }}
       >
         Afuera
       </Button>
@@ -168,7 +216,7 @@ export default function Grants(): React.ReactElement {
             clearInterval(progressInterval);
             return 100;
           }
-          return prevProgress + (100/45);
+          return prevProgress + (100/80);
         });
       }, 1000);
     } else {
