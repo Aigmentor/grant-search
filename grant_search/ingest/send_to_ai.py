@@ -85,7 +85,7 @@ class SendToAI:
 
             # Wait for all futures to complete
             with Session() as session:
-                for future in futures:
+                for i, future in enumerate(futures):
                     try:
                         result = future.result()
                         if result:
@@ -100,6 +100,8 @@ class SendToAI:
                             )
                             session.add(derived_data)
                             logger.info(f"Saved derived data for grant {grant.id}")
+                            if i % 20 == 0:
+                                session.commit()
                     except Exception as e:
                         logger.error(f"Stack trace:\n{traceback.format_exc()}")
                         logger.error(f"Thread execution failed: {str(e)}")

@@ -127,7 +127,16 @@ def get_grants_query_status():
             )
 
         logging.info(f"Found {len(output)} grants- returning")
-        return jsonify({"status": "success", "results": output}), 200
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "sampleFraction": query.sampling_fraction,
+                    "results": output,
+                }
+            ),
+            200,
+        )
 
 
 @api.route("/grants", methods=["GET"])

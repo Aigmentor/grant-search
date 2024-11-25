@@ -109,7 +109,7 @@ class Grant(Base):
     )
 
     def get_award_url(self):
-        return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID=${self.award_id}&HistoricalAwards=false"
+        return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false"
 
 
 class GrantDerivedData(Base):
@@ -158,3 +158,4 @@ class GrantSearchQuery(Base):
     grants = relationship("Grant", secondary="grant_search_query_grants")
     reasons = Column(ARRAY(String))
     complete = Column(Boolean)
+    sampling_fraction = Column(Float)

@@ -74,6 +74,7 @@ const columns: ColumnsType<Grant> = [
 
 export default function Grants(): React.ReactElement {
   const [grants, setGrants] = useState<Grant[]>([]);
+  const [samplingFraction, setSamplingFraction] = useState(1.0);
   const [agencies, setAgencies] = useState<{id: number, name: string}[]>([]);
   const [queryId, setQueryId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -125,6 +126,8 @@ export default function Grants(): React.ReactElement {
         if (response.data.status === 'success') {
           console.log('grants', response.data.results);
           setGrants(response.data.results);
+          console.log('samplingFraction', response.data.sampleFraction);
+          setSamplingFraction(response.data.sampleFraction);
           setQueryId(undefined);
           setLoading(false);
         }
@@ -132,6 +135,7 @@ export default function Grants(): React.ReactElement {
         console.error('Error polling query status:', error);
         setLoading(false);
         setQueryId(undefined);
+        setSamplingFraction(1.0);
       }
     };
 
@@ -232,9 +236,11 @@ export default function Grants(): React.ReactElement {
           Search
         </Button> 
       </Space>*/}
-      <div style={{ marginBottom: 16, fontWeight: 'bold' }}>
-          Total Amount: ${grants.reduce((sum, grant) => sum + (grant.amount || 0), 0).toLocaleString()}
-      </div>
+        {samplingFraction < 1.0 && <span>Data estimated based on sampling fraction of {Math.round(samplingFraction * 100)}% </span>}
+        <br/>
+          Totals:<span style={{ marginBottom: 16, fontWeight: 'bold' }}>
+          {Math.round(grants.length / samplingFraction)} grants for ${Math.round(grants.reduce((sum, grant) => sum + (grant.amount || 0), 0) / samplingFraction).toLocaleString()}
+      </span>
 
       <Table
         columns={columns}

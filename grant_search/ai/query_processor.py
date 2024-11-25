@@ -34,7 +34,7 @@ class QueryThread:
 def _run_query(query_id: int):
     with get_session() as session:
         grant_search_query = session.query(GrantSearchQuery).get(query_id)
-        results = query_by_text(session, grant_search_query.query)
+        results = query_by_text(session, grant_search_query)
         grant_search_query.grants = [result for result, _ in results]
         grant_search_query.reasons = [reason for _, reason in results]
         grant_search_query.complete = True
