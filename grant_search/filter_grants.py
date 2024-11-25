@@ -8,8 +8,8 @@ from grant_search.db.models import Agency, Grant, DataSource
 
 def filter_grants_from_ai(
     session,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    start_date_before: Optional[datetime] = None,
+    start_date_after: Optional[datetime] = None,
     agency: Optional[str] = None,
     datasource: Optional[str] = None,
 ) -> List[Grant]:
@@ -18,7 +18,6 @@ def filter_grants_from_ai(
 
     Args:
         session: (session) SQLAlchemy session
-        start_date (datetime): Optional start date to filter grants
         agency (str): Optional agency name to filter by. Agency name must be exact.
         datasource (str): Optional datasource name to filter by. Datasource name
             is a `like` and an contain '%' for wildcards
@@ -43,14 +42,14 @@ def filter_grants_from_ai(
         if agency_result:
             agency_id = agency_result.id
     return filter_grants_query(
-        session, start_date, end_date, agency_id, datasources
+        session, start_date_before, start_date_after, agency_id, datasources
     ).all()
 
 
 def filter_grants_query(
     session,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    start_date_before: Optional[datetime] = None,
+    start_date_after: Optional[datetime] = None,
     agency_id: Optional[int] = None,
     datasource_ids: Optional[list[int]] = None,
 ) -> Query:
@@ -59,8 +58,6 @@ def filter_grants_query(
 
     Args:
         query: Base SQLAlchemy query object
-        start_date: Optional start date to filter grants
-        end_date: Optional end date to filter grants
         agency_id: Optional agency ID to filter by
         datasource_ids: Optional list of datasource IDs to filter by
 
@@ -69,11 +66,11 @@ def filter_grants_query(
     """
     query = session.query(Grant).options(undefer(Grant.raw_text))
 
-    if start_date:
-        query = query.filter(Grant.start_date >= start_date)
+    if start_date_before:
+        query = query.filter(Grant.start_date <= start_date_before)
 
-    if end_date:
-        query = query.filter(Grant.end_date <= end_date)
+    if start_date_before:
+        query = query.filter(Grant.start_date >= start_date_after)
 
     # Join with DataSource if we need to filter by agency
     if agency_id:

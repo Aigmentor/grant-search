@@ -12,7 +12,7 @@ from grant_search.ai.common import ai_client, format_for_llm
 from grant_search.db.models import Grant
 from grant_search.filter_grants import filter_grants_from_ai
 
-logging.getLogger("instructor").setLevel(logging.WARNING)
+logging.getLogger("instructor").setLevel(logging.DEBUG)
 
 TOP_LEVEL_MODEL = "gpt-4o"
 FILTER_MODEL = "gpt-4o-mini"
@@ -21,9 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 class SearchFunction(BaseModel):
-    start_date: Optional[datetime] = Field(description="Start date for the grant")
+    start_date_after: Optional[datetime] = Field(
+        description="Start date for the grant must be after this date"
+    )
+    start_date_before: Optional[datetime] = Field(
+        description="Start date for the grant must be before this date"
+    )
 
-    end_date: Optional[datetime] = Field(description="End date for the grant")
+    # end_date: Optional[datetime] = Field(description="End date for the grant")
 
     agency: Optional[str] = Field(
         description="Agency name to filter by. Agency name must be exact."
@@ -93,8 +98,8 @@ def query_by_text(session, text: str) -> List[Tuple[Grant, str]]:
     search_function = _get_search_function(text)
     grants = filter_grants_from_ai(
         session=session,
-        start_date=search_function.start_date,
-        end_date=search_function.end_date,
+        start_date_before=search_function.start_date_efore,
+        start_date_after=search_function.start_date_after,
         agency=search_function.agency,
         datasource=search_function.data_source,
     )
