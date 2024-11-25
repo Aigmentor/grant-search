@@ -155,7 +155,7 @@ class Ingester:
                 end_date=end_date,
                 amount=float(amount),
                 description=description,
-                awward_id=award_id,
+                award_id=award_id,
                 data_source_id=self.data_source.id,
                 raw_text=content.encode(),
             )
