@@ -18,6 +18,18 @@ interface Grant {
 
 const columns: ColumnsType<Grant> = [
   {
+    title: 'Afuera',
+    key: 'afuera', 
+    render: () => (
+      <Button
+        type="primary"
+        onClick={() => window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')}
+      >
+        Afuera
+      </Button>
+    ),
+  },
+  {
     title: 'Title',
     dataIndex: 'title',
     key: 'title',
@@ -165,6 +177,7 @@ export default function Grants(): React.ReactElement {
                 });
                 setQueryId(response.data.queryId);
                 setGrants([]);
+                setSamplingFraction(1.0);
               } catch (error) {
                 console.error('Error fetching grants by text:', error);
                 setLoading(false);
