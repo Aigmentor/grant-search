@@ -9,25 +9,39 @@ import traceback
 
 from grant_search.ai.common import format_for_llm, ai_client
 from grant_search.db.database import Session
-from grant_search.db.models import Grant, GrantDerivedData
+from grant_search.db.models import DEIStatus, Grant, GrantDerivedData
 
 logger = logging.getLogger(__name__)
 
 
 class GrantAnalysis(BaseModel):
-    dei: bool = Field(
+    dei_status: DEIStatus = Field(
         description="""
-        Set to true if the title/description mention things related to DEI, such as
-        PoCs, Women, gay or trans. Note just the word "diverse" or "diversity" or "women"
-        is not enough to set this to true.
+        none - No mention of DEI
+        mentions_dei - The grant mentions DEI, but is not focused on DEI, perhaps just using the word "diversity"
+        partial_dei - The grant isn't focused on DEI, but DEI concepts are important in the design or research.
+        primarily_dei - The grant is focused on DEI and the research strongly concerns DEI concepts or topics.
         """,
     )
-    primary_dei: bool = Field(
+    dei_women: bool = Field(
         description="""
-        Set to true if the title/description related to research primarily related to DEI,
-        such as PoCs, Women, LGTBQ, Inequality or other DEI-related topics.
+        Set to true if the grant mentions women or gender in the title or description.
         """,
     )
+
+    dei_race: bool = Field(
+        description="""
+        Set to true if the grant mentions race or ethnicity in the title or description.
+        """,
+    )
+
+    outrageous: bool = Field(
+        description="""
+        Set to true if the grant is outrageous involving DEI or other non-science topics directly
+        into research on real topics, such as "Indigenous Science" or "Indigenous Knowledge".
+        """,
+    )
+
     hard_science: bool = Field(
         description="""
         Set to true if the title/description related to research primarily related to Hard Scientific
@@ -93,11 +107,7 @@ class SendToAI:
                             grant, analysis = result
                             derived_data = GrantDerivedData(
                                 grant_id=grant.id,
-                                dei=analysis.dei,
-                                primary_dei=analysis.primary_dei,
-                                hard_science=analysis.hard_science,
-                                political_science=None,
-                                carbon=analysis.carbon,
+                                **analysis.model_dump(),
                             )
                             session.add(derived_data)
                             logger.info(f"Saved derived data for grant {grant.id}")

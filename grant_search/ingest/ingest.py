@@ -247,19 +247,3 @@ class Ingester:
                 logger.info(f"Processed {len(grants)} grants through AI")
             else:
                 logger.warn("No grants found to process through AI")
-
-
-if __name__ == "__main__":
-    import argparse
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    parser = argparse.ArgumentParser(description="Ingest grant data from a URL or file")
-    parser.add_argument("--input_url", help="URL or path to input file", required=True)
-    parser.add_argument("--source_name", help="short name for source", required=True)
-    parser.add_argument("--agency", help="Agency name", required=True)
-
-    args = parser.parse_args()
-
-    ingester = Ingester(args.source_name, args.input_url, args.agency)
-    ingester.ingest()

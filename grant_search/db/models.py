@@ -1,3 +1,4 @@
+import enum
 from typing import Type, TypeVar
 from sqlalchemy import (
     ARRAY,
@@ -6,6 +7,7 @@ from sqlalchemy import (
     VARCHAR,
     Boolean,
     DateTime,
+    Enum,
     ForeignKey,
     Index,
     LargeBinary,
@@ -121,11 +123,21 @@ class Grant(Base):
         return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false"
 
 
+class DEIStatus(enum.Enum):
+    NONE = "none"
+    MENTIONS_DEI = "mentions_dei"
+    PARTIAL_DEI = "partial_dei"
+    PRIMARILY_DEI = "primarily_dei"
+
+
 class GrantDerivedData(Base):
     __tablename__ = "grant_derived_data"
     id = Column(Integer, primary_key=True)
     grant_id = Column(Integer, ForeignKey("grants.id", ondelete="CASCADE"))
-    dei = Column(Boolean)
+    dei_status = Column(Enum(DEIStatus))
+    dei_women = Column(Boolean)
+    dei_race = Column(Boolean)
+    outrageous = Column(Boolean)
     primary_dei = Column(Boolean)
     hard_science = Column(Boolean)
     political_science = Column(Boolean)

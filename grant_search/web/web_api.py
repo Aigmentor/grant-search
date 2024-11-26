@@ -119,8 +119,10 @@ def get_grants_query_status():
                 ),
                 200,
             )
-
-        results = zip(query.grants, query.reasons)
+        if query.reasons is None or len(query.reasons) == 0:
+            results = []
+        else:
+            results = zip(query.grants, query.reasons)
 
         output = []
         # Skip entries before start_index

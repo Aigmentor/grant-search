@@ -13,6 +13,7 @@ from grant_search.ai.common import ai_client, format_for_llm
 from grant_search.db.database import get_session
 from grant_search.db.models import (
     Agency,
+    DEIStatus,
     DataSource,
     Grant,
     GrantDerivedData,
@@ -45,12 +46,34 @@ class LinearSearchFunction(BaseModel):
         description="Data source name to filter by. Data source name is a `like` and can contain '%' for wildcards."
     )
 
-    has_dei: Optional[bool] = Field(
-        description="If True then filter for grants which mention DEI in the description"
+    dei_status: Optional[List[DEIStatus]] = Field(
+        description="""
+        Filter for grants based on the DEI status. Add all statuses that might apply for the requested search filter:
+        none - No mention of DEI
+        mentions_dei - The grant mentions DEI, but is not focused on DEI, perhaps just using the word "diversity"
+        partial_dei - The grant isn't focused on DEI, but DEI concepts are important in the design or research.
+        primarily_dei - The grant is focused on DEI and the research strongly concerns DEI concepts or topics.
+        """,
     )
 
-    has_dei_focus: Optional[bool] = Field(
-        description="If True then filter for grants which strongly focus on DEI as part of the research program."
+    dei_women: Optional[bool] = Field(
+        description="Filter for (True) or out (False) which mention women for DEI purposes."
+    )
+
+    dei_race: Optional[bool] = Field(
+        description="Filter for (True) or out (False) grants which mention race or ethnicity for DEI purposes."
+    )
+
+    outrageous: Optional[bool] = Field(
+        description="Filter for (True) or out (False) grants which are outrageous involving DEI or other non-science topics directly"
+    )
+
+    hard_science: Optional[bool] = Field(
+        description="Filter for (True) or out (False) for grants which are primarily hard science."
+    )
+
+    carbon: Optional[bool] = Field(
+        description="Filter for (True) or out (False)for grants which are primarily about CO2/global warming."
     )
 
 
@@ -78,8 +101,6 @@ SYSTEM_PROMPT = """
 You are an expert at filtering grants based on the grant description.
 You will be given a description of the grants you want to find, 
 Fill out the results with appropriate JSON as described by the schema.
-If the query involves DEI topics like Women's studies then it probably is looking
-for grants with a DEI focus.
 """
 
 
@@ -130,13 +151,27 @@ def _filter_grants_from_linear(
     if lsf.start_date_before:
         query = query.filter(Grant.start_date >= lsf.start_date_after)
 
-    if lsf.has_dei is not None or lsf.has_dei_focus is not None:
+    if (
+        lsf.dei_status is not None
+        or lsf.dei_women is not None
+        or lsf.dei_race is not None
+        or lsf.outrageous is not None
+        or lsf.hard_science is not None
+        or lsf.carbon is not None
+    ):
         query = query.join(GrantDerivedData, GrantDerivedData.grant_id == Grant.id)
-
-        if lsf.has_dei is not None:
-            query = query.filter(GrantDerivedData.dei == True)
-        if lsf.has_dei_focus is not None:
-            query = query.filter(GrantDerivedData.primary_dei == True)
+        if lsf.dei_status is not None and len(lsf.dei_status) > 0:
+            query = query.filter(GrantDerivedData.dei_status.in_(lsf.dei_status))
+        if lsf.dei_women is not None:
+            query = query.filter(GrantDerivedData.dei_women == lsf.dei_women)
+        if lsf.dei_race is not None:
+            query = query.filter(GrantDerivedData.dei_race == lsf.dei_race)
+        if lsf.outrageous is not None:
+            query = query.filter(GrantDerivedData.outrageous == lsf.outrageous)
+        if lsf.hard_science is not None:
+            query = query.filter(GrantDerivedData.hard_science == lsf.hard_science)
+        if lsf.carbon is not None:
+            query = query.filter(GrantDerivedData.carbon == lsf.carbon)
 
     return query.all()
 
