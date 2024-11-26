@@ -325,13 +325,26 @@ export default function Grants(): React.ReactElement {
         <Collapse style={{ marginBottom: 16 }}>
           <Collapse.Panel header="Search Examples" key="1">
             <ul style={{ margin: 0, paddingLeft: 20 }}>
-              <li>Find grants about organ donation that end after January 2024</li>
-              <li>Show me NIH grants related to cancer research [NIH data not loaded]</li>
-              <li>Find grants from the NSF about renewable energy</li>
-              <li>Grants featuring womens studies and Physics granted in June 2025</li>
-              <li>Find grants awarded to &quot;Mandoye Ndoye&quot; related to DEI</li>
-              <li>Show grants focused on DEI initiatives with budgets over $100,000</li>
-              <li>Find NSF grants about artificial intelligence from datasource &quot;NSF 2024&quot;</li>
+              {[
+                "Find grants about organ donation that end after January 2024",
+                "Show me NIH grants related to cancer research [NIH data not loaded]", 
+                "Find grants from the NSF about renewable energy",
+                "Grants featuring womens studies and Physics granted in June 2025",
+                "Find grants awarded to \"Mandoye Ndoye\" related to DEI",
+                "Show grants focused on DEI initiatives with budgets over $100,000",
+                "Find NSF grants about artificial intelligence from datasource \"NSF 2024\""
+              ].map((example, i) => (
+                <li 
+                  key={i}
+                  onClick={() => {
+                    setFilters(prev => ({...prev, text: example}));
+                    submitSearch(example);
+                  }}
+                  style={{cursor: 'pointer'}}
+                >
+                  {example}
+                </li>
+              ))}
             </ul>
           </Collapse.Panel>
         </Collapse>
