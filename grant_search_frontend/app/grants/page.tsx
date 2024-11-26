@@ -178,7 +178,6 @@ export default function Grants(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    console.log('queryId', queryId);
     if (queryId === undefined) return;
 
     const pollQueryStatus = async () => {
@@ -192,14 +191,17 @@ export default function Grants(): React.ReactElement {
         const inProgress = response.data.status === 'in_progress' && response.data.results;
         const success = response.data.status === 'success';
         if (success || inProgress) {
-          console.log('grants', response.data.results);
+          // console.log('grants', response.data.results);
           downloadedGrants.push(...response.data.results);
-          setGrants(downloadedGrants.slice(0));
-          console.log('samplingFraction', response.data.sampleFraction);
+          if (downloadedGrants.length === 0) {
+            setGrants(undefined)
+          } else {
+           setGrants(downloadedGrants.slice(0));
+          }
           setSamplingFraction(response.data.sampleFraction);
+          console.log(`Status: ${response.data.status} ${success}`)
           if (success) {
             downloadedGrants = [];
-            setQueryId(undefined);
             setLoading(false);
           }
         }
@@ -308,63 +310,18 @@ export default function Grants(): React.ReactElement {
           </Collapse.Panel>
         </Collapse>
       </Space>
-{/* 
-      <Space style={{ marginBottom: 16 }}>
-        <Select
-          style={{ width: 200 }}
-          placeholder="Filter by Agency"
-          allowClear
-          onChange={(value) => setFilters(prev => ({ ...prev, agency: value }))}
-        >
-          {agencies.map(agency => (
-            <Select.Option key={agency.id} value={agency.id}>
-              {agency.name}
-            </Select.Option>
-          ))}
-        </Select>
-
-        <Select
-          style={{ width: 200 }}
-          placeholder="Filter by Data Source"
-          allowClear
-          onChange={(value) => setFilters(prev => ({ ...prev, datasource: value }))}
-        >
-          {dataSources.map(datasource => (
-            <Select.Option key={datasource.id} value={datasource.id}>
-              [{datasource.agency_name}] {datasource.name}
-            </Select.Option>
-          ))}
-        </Select>
-        <Button 
-          type="primary"
-          onClick={() => {
-            const fetchGrants = async () => {
-              setLoading(true);
-              try {
-                const response = await axios.get('/api/grants', { params: filters });
-                setGrants(response.data);
-              } catch (error) {
-                console.error('Error fetching grants:', error);
-              } finally {
-                setLoading(false);
-              }
-            };
-            fetchGrants();
-          }}
-        >
-          Search
-        </Button> 
-      </Space>*/}
         {samplingFraction < 1.0 && <span>Data estimated based on sampling fraction of {Math.round(samplingFraction * 100)}% </span>}
         <br/>
-          Totals:<span style={{ marginBottom: 16, fontWeight: 'bold' }}>
-          {Math.round(grants.length / samplingFraction)} grants for ${Math.round(grants.reduce((sum, grant) => sum + (grant.amount || 0), 0) / samplingFraction).toLocaleString()}
-      </span>
+          {grants && grants.length > 0 && <span>
+              Totals:<span style={{ marginBottom: 16, fontWeight: 'bold' }}>
+              {Math.round(grants.length / samplingFraction)} grants for ${Math.round(grants.reduce((sum, grant) => sum + (grant.amount || 0), 0) / samplingFraction).toLocaleString()}
+            </span>
+        </span>}
 
       <Table
         columns={columns}
         dataSource={grants}
-        loading={!grants ||grants.length === 0}
+        loading={loading && (grants && grants.length === 0)}
         rowKey="id"
         pagination={{
           pageSize: 10,
