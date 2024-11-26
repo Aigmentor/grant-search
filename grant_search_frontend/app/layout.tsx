@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Grant Search AI",
-  description: "Search government grants with AI",
+  title: "DOGE FUERA",
+  description: "Search government grants with AI. Find the worst and win a prize.",
 };
 
 export default function RootLayout({
