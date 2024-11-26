@@ -114,6 +114,7 @@ def get_grants_query_status():
                     {
                         "status": query.status,
                         "sampleFraction": query.sampling_fraction,
+                        "queryText": query.query_text,
                         "results": [],
                     }
                 ),
@@ -150,6 +151,7 @@ def get_grants_query_status():
                 {
                     "status": "success" if query.complete else "in_progress",
                     "sampleFraction": query.sampling_fraction,
+                    "queryText": query.query_text,
                     "results": output,
                 }
             ),

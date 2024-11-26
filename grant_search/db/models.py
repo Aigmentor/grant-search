@@ -176,6 +176,7 @@ class GrantSearchQuery(TimestampMixin, Base):
     id = Column(Integer, primary_key=True)
     query = Column(String)
     timestamp = Column(DateTime)
+    query_text = Column(String)
     grants = relationship("Grant", secondary="grant_search_query_grants")
     reasons = Column(ARRAY(String))
     complete = Column(Boolean)

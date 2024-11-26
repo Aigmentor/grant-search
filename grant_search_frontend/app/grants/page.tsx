@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Select, Space, Button, Input, Collapse } from "antd";
 import type { ColumnsType } from 'antd/es/table';
@@ -148,6 +148,36 @@ export default function Grants(): React.ReactElement {
     text: ''
   });
 
+  const submitSearch = async (queryText: string, queryId?: number) => {
+    try {
+      setQueryStatus("Queuing");
+      setLoading(true);
+      if (queryId === undefined) {
+        const response = await axios.post('/api/grants_by_text', { 
+          text: queryText 
+        });
+        queryId = response.data.queryId;
+      }
+      setQueryId(queryId);
+      const newUrl = `${window.location.pathname}?queryId=${queryId}`;
+        window.history.pushState({}, '', newUrl);
+        setGrants([]);
+        setSamplingFraction(1.0);
+    } catch (error) {
+      console.error('Error fetching grants by text:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect( () => {
+    const params = new URLSearchParams(window.location.search);
+    const urlQueryId = params.get('queryId');
+    console.log(`URL queryId: ${urlQueryId}`)
+    if (urlQueryId) {
+      submitSearch('',parseInt(urlQueryId));
+    }
+  }, [])
+  
 
   useEffect(() => {
     const fetchAgencies = async () => {
@@ -186,7 +216,10 @@ export default function Grants(): React.ReactElement {
           queryId: queryId,
           startIndex: downloadedGrants.length
         });
-        
+        const queryText = response.data.queryText;
+        if (queryText && filters.text !== queryText) {
+          setFilters(prev => ({ ...prev, text: queryText }));
+        }
         setQueryStatus(response.data.status == 'in_progress'? 'streaming results...': response.data.status);
         const inProgress = response.data.status === 'in_progress' && response.data.results;
         const success = response.data.status === 'success';
@@ -214,7 +247,7 @@ export default function Grants(): React.ReactElement {
       }
     };
 
-    const intervalId = setInterval(pollQueryStatus, 5000);
+    const intervalId = setInterval(pollQueryStatus, 3000);
 
     return () => clearInterval(intervalId);
   }, [queryId]);
@@ -254,24 +287,6 @@ export default function Grants(): React.ReactElement {
     display: loading ? 'block' : 'none'
   };
 
-  const submitSearch = () => {
-      const fetchGrantsByText = async () => {
-        setQueryStatus("Queuing");
-        setLoading(true);
-        try {
-          const response = await axios.post('/api/grants_by_text', { 
-            text: filters.text 
-          });
-          setQueryId(response.data.queryId);
-          setGrants([]);
-          setSamplingFraction(1.0);
-        } catch (error) {
-          console.error('Error fetching grants by text:', error);
-          setLoading(false);
-        }
-      };
-      fetchGrantsByText();
-    };
 
     return (
     <div style={{ margin: '40px 20px' }}>
@@ -284,14 +299,14 @@ export default function Grants(): React.ReactElement {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              submitSearch();
+              submitSearch(filters.text);
             }
           }}
           onChange={(e) => setFilters(prev => ({ ...prev, text: e.target.value }))}
         />
                 <Button
           type="primary"
-          onClick={submitSearch}
+          onClick={() => submitSearch(filters.text)}
         >
         {loading ? 'Searching...' : 'Search'}
         </Button>

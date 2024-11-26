@@ -48,7 +48,7 @@ def create_query(query: str) -> int:
     """
     with get_session() as session:
         grant_search_query = GrantSearchQuery(
-            complete=False, query=query, timestamp=datetime.now()
+            complete=False, query=query, timestamp=datetime.now(), query_text=query
         )
         session.add(grant_search_query)
         session.commit()
