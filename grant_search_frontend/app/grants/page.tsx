@@ -254,7 +254,26 @@ export default function Grants(): React.ReactElement {
     display: loading ? 'block' : 'none'
   };
 
-  return (
+  const submitSearch = () => {
+      const fetchGrantsByText = async () => {
+        setQueryStatus("Queuing");
+        setLoading(true);
+        try {
+          const response = await axios.post('/api/grants_by_text', { 
+            text: filters.text 
+          });
+          setQueryId(response.data.queryId);
+          setGrants([]);
+          setSamplingFraction(1.0);
+        } catch (error) {
+          console.error('Error fetching grants by text:', error);
+          setLoading(false);
+        }
+      };
+      fetchGrantsByText();
+    };
+
+    return (
     <div style={{ margin: '40px 20px' }}>
       <h1>Grants</h1>
       <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
@@ -262,28 +281,17 @@ export default function Grants(): React.ReactElement {
           placeholder="Describe the grants you're looking for..." 
           rows={3}
           value={filters.text}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submitSearch();
+            }
+          }}
           onChange={(e) => setFilters(prev => ({ ...prev, text: e.target.value }))}
         />
                 <Button
           type="primary"
-          onClick={() => {
-            const fetchGrantsByText = async () => {
-              setQueryStatus("Queuing");
-              setLoading(true);
-              try {
-                const response = await axios.post('/api/grants_by_text', { 
-                  text: filters.text 
-                });
-                setQueryId(response.data.queryId);
-                setGrants([]);
-                setSamplingFraction(1.0);
-              } catch (error) {
-                console.error('Error fetching grants by text:', error);
-                setLoading(false);
-              }
-            };
-            fetchGrantsByText();
-          }}
+          onClick={submitSearch}
         >
         {loading ? 'Searching...' : 'Search'}
         </Button>
