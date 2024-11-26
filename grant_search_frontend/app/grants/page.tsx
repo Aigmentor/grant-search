@@ -326,9 +326,9 @@ export default function Grants(): React.ReactElement {
           <Collapse.Panel header="Search Examples" key="1">
             <ul style={{ margin: 0, paddingLeft: 20 }}>
               {[
-                "Find grants about organ donation that end after January 2024",
+                "Find NSF grants about BiPOCS and renewable energy",
                 "Show me NIH grants related to cancer research [NIH data not loaded]", 
-                "Find grants from the NSF about renewable energy",
+                "Find grants from the NSF about Global Warming and women's rights",
                 "Grants featuring womens studies and Physics granted in June 2025",
                 "Find grants awarded to \"Mandoye Ndoye\" related to DEI",
                 "Show grants focused on DEI initiatives with budgets over $100,000",
