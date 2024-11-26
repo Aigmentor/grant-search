@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import random
 import traceback
@@ -176,7 +176,7 @@ def _filter_grants_from_linear(
     return query.all()
 
 
-def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[bool, str]:
+def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, str]:
     prompt = f"""
     You are answering this question: `{user_query}`
     You will be given a grant description. Use that to answer this question with
@@ -190,7 +190,7 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[bool, str]:
             messages=messages,
             response_model=GrantFilter,
         )
-        return result.result, result.reason
+        return grant, result.result, result.reason
     except Exception as e:
         logger.error(f"Error filtering grant {e}")
         return False, "Error"
@@ -237,9 +237,9 @@ def query_by_text(
         session.refresh(query)
         logging.info(f"Submitted {len(grants)} for analysis")
         # Process results as they complete
-        for i, (grant, future) in enumerate(zip(grants, futures)):
+        for i, future in enumerate(as_completed(futures)):
             try:
-                included, reason = future.result()
+                grant, included, reason = future.result()
                 if included:
                     # reference grant.data_source.gency totrigger a load
                     grant.data_source.agency
