@@ -299,7 +299,7 @@ export default function Grants(): React.ReactElement {
         <div style={{ position: 'relative', marginBottom: '20px' }}>
           {loading && (
             <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '-20px', fontSize: '12px', color: '#666' }}>
-              {queryStatus.toUpperCase()}
+              {queryStatus.toUpperCase().replace('_', ' ')}
             </div>
           )}
           <div style={progressBarStyle}></div>
