@@ -250,7 +250,9 @@ export default function Grants(): React.ReactElement {
     const intervalId = setInterval(pollQueryStatus, 3000);
 
     return () => clearInterval(intervalId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryId]);
+
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
