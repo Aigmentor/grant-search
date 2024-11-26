@@ -7,6 +7,8 @@ import logging
 from pydantic import BaseModel, Field
 import traceback
 
+from sqlalchemy.orm import undefer
+
 from grant_search.ai.common import format_for_llm, ai_client
 from grant_search.db.database import Session
 from grant_search.db.models import DEIStatus, Grant, GrantDerivedData
@@ -70,6 +72,23 @@ class SendToAI:
     def __init__(self):
         self.client = ai_client
 
+    def complete_partial_grants(self):
+        with Session() as session:
+            query = (
+                session.query(Grant)
+                .options(undefer(Grant.raw_text))
+                .filter(Grant.derived_data == None)
+                .all()
+            )
+            logger.info(f"Processing {len(query)} partial grants")
+            self.process_grants(query)
+
+    def complete_all_grants(self):
+        with Session() as session:
+            query = session.query(Grant).all()
+            logger.info(f"Processing {len(query)} grants")
+            self.process_grants(query)
+
     def process_single_grant(self, grant: Grant) -> GrantAnalysis:
         try:
             if isinstance(grant.raw_text, bytes):
@@ -99,21 +118,32 @@ class SendToAI:
             ]
 
             # Wait for all futures to complete
-            with Session() as session:
-                for i, future in enumerate(futures):
-                    try:
-                        result = future.result()
-                        if result:
-                            grant, analysis = result
-                            derived_data = GrantDerivedData(
-                                grant_id=grant.id,
-                                **analysis.model_dump(),
-                            )
-                            session.add(derived_data)
-                            logger.info(f"Saved derived data for grant {grant.id}")
-                            if i % 20 == 0:
-                                session.commit()
-                    except Exception as e:
-                        logger.error(f"Stack trace:\n{traceback.format_exc()}")
-                        logger.error(f"Thread execution failed: {str(e)}")
+            session = Session()
+            for i, future in enumerate(futures):
+                try:
+                    result = future.result()
+                    if result:
+                        grant, analysis = result
+                        # Delete existing derived data if present
+                        existing = (
+                            session.query(GrantDerivedData)
+                            .filter(GrantDerivedData.grant_id == grant.id)
+                            .first()
+                        )
+                        if existing:
+                            session.delete(existing)
+                            session.flush()
+
+                        derived_data = GrantDerivedData(
+                            grant_id=grant.id,
+                            **analysis.model_dump(),
+                        )
+                        session.add(derived_data)
+                        logger.info(f"Saved derived data for grant {grant.id}")
+                        if i % 20 == 0:
+                            session.commit()
+                            session = Session()
+                except Exception as e:
+                    logger.error(f"Stack trace:\n{traceback.format_exc()}")
+                    logger.error(f"Thread execution failed: {str(e)}")
                 session.commit()
