@@ -203,6 +203,7 @@ export default function Grants(): React.ReactElement {
           if (success) {
             downloadedGrants = [];
             setLoading(false);
+            setQueryId(undefined);
           }
         }
       } catch (error) {
