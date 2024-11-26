@@ -47,6 +47,19 @@ def create_query(query: str) -> int:
     the GrantSearchQuery record's complete flag and accessing its grants and reasons fields.
     """
     with get_session() as session:
+        # Check for existing completed query with same text
+        existing_query = (
+            session.query(GrantSearchQuery)
+            .filter(
+                GrantSearchQuery.query_text == query, GrantSearchQuery.complete == True
+            )
+            .first()
+        )
+
+        if existing_query:
+            logger.info(f"Found existing completed query with text: {query}")
+            return existing_query.id
+
         grant_search_query = GrantSearchQuery(
             complete=False, query=query, timestamp=datetime.now(), query_text=query
         )

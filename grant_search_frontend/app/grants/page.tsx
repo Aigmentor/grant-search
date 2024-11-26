@@ -330,7 +330,7 @@ export default function Grants(): React.ReactElement {
                 "Show me NIH grants related to cancer research [NIH data not loaded]", 
                 "Find grants from the NSF about Global Warming and women's rights",
                 "Grants featuring womens studies and Physics granted in June 2025",
-                "Find grants awarded to \"Mandoye Ndoye\" related to DEI",
+                "Find grants awarded to \"Evan Flach\" related to DEI",
                 "Show grants focused on DEI initiatives with budgets over $100,000",
                 "Find NSF grants about artificial intelligence from datasource \"NSF 2024\""
               ].map((example, i) => (
