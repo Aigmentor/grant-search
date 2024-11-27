@@ -38,7 +38,7 @@ def grants():
 
 
 @app.route("/datasource")
-def grants():
+def datasource():
     logging.info(f"Index page from: {app.static_folder}")
     return app.send_static_file("datasource.html")
 
