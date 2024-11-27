@@ -13,7 +13,7 @@ export default function Home() {
       <div className="mb-8">
         <p className="text-lg mb-4">
           Doge Afuera is a project to find and &quot;afuera&quot; terrible government grant spendings.
-          We've indexed thousands of grants from the US government and are using AI to find the worst of the worst.          
+          We&apos;ve indexed thousands of grants from the US government and are using AI to find the worst of the worst.          
         </p>
         <p className="text-lg mb-4">
           Search for grants using natural language, find the worst offenders and....
@@ -35,7 +35,7 @@ export default function Home() {
 
           onClick={() => {window.location.href = '/grants'}}
         >
-          Let's Go!
+          Let&apos;s Go!
         </Button>
       </div>
 
