@@ -37,6 +37,12 @@ def grants():
     return app.send_static_file("grants.html")
 
 
+@app.route("/datasource")
+def grants():
+    logging.info(f"Index page from: {app.static_folder}")
+    return app.send_static_file("datasource.html")
+
+
 @app.errorhandler(NotFound)
 def handle_static_missing(e):
     path = Path(request.path)
