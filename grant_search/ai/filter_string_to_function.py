@@ -100,7 +100,9 @@ class GrantFilter(BaseModel):
     reason: str = Field(
         description="Reason for the answer. This parameter must be first. Should be a short sentence or two, no more than 50 tokens"
     )
-    result: bool = Field(description="True/False answer to the question")
+    result: bool = Field(
+        description="True/False answer to the question. Only respond True if the grant clearly and unambiguously matches the question."
+    )
 
 
 SYSTEM_PROMPT = """
