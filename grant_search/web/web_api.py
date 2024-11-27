@@ -145,7 +145,6 @@ def get_grants_query_status():
                 }
             )
 
-        logging.info(f"Found {len(output)} grants- returning")
         return (
             jsonify(
                 {

@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 import random
+import threading
 import traceback
 from typing import Generator, List, Optional, Tuple
 from pydantic import BaseModel, Field
@@ -242,7 +243,7 @@ def query_by_text(
     session.commit()
     session.refresh(query)
 
-    with ThreadPoolExecutor(max_workers=502) as executor:
+    with ThreadPoolExecutor(max_workers=612) as executor:
         # Create list of futures for each grant query
         logging.info(f"{len(grants)} grants to scan")
         futures = [
@@ -259,15 +260,21 @@ def query_by_text(
         # Process results as they complete
         for i, future in enumerate(futures):
             try:
-                grant, included, reason = future.result(timeout=10)
+                grant, included, reason = future.result(timeout=12)
                 if included:
                     grant.data_source.agency
-                    yield ((grant, reason))
+                    yield (grant, reason)
 
                 if i % 40 == 39:
                     logger.info(f"Processed {i + 1} grants")
             except Exception as e:
+                future.cancel()
                 logger.error(f"Stack trace:\n{traceback.format_exc()}")
                 logger.error(f"Error processing grant {grant.id}: {e}")
+        logger.info("Done processing all grants1")
+        executor.shutdown()
 
-        logger.info("Done processing all grants")
+    logger.info("Done processing all grants2")
+    threads = threading.enumerate()
+    for thread in threads:
+        logger.info(f"Thread: {thread.name}")

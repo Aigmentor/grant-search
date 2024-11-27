@@ -10,27 +10,33 @@ logger = logging.getLogger(__name__)
 
 
 def _run_query(query_id: int):
-    with get_session() as session:
-        grant_search_query = session.query(GrantSearchQuery).get(query_id)
-        results = query_by_text(session, grant_search_query)
-        grants = []
-        reasons = []
-        for i, (result, reason) in enumerate(results):
-            result = session.query(Grant).get(result.id)
-            grants.append(result)
-            reasons.append(reason)
-            grant_search_query.grants = grants
-            grant_search_query.reasons = reasons
-            if i % 100 == 99 or i == 5:
-                session.add(grant_search_query)
-                logging.info(f"Processed {i+1} grants")
-                session.commit()
-                session.begin()
-                session.refresh(grant_search_query)
+    try:
+        with get_session() as session:
+            grant_search_query = session.query(GrantSearchQuery).get(query_id)
+            results = query_by_text(session, grant_search_query)
+            grants = []
+            reasons = []
+            for i, (result, reason) in enumerate(results):
+                result = session.query(Grant).get(result.id)
+                grants.append(result)
+                reasons.append(reason)
+                grant_search_query.grants = grants
+                grant_search_query.reasons = reasons
+                if i % 100 == 99 or i == 5:
+                    session.add(grant_search_query)
+                    logging.info(f"Processed {i+1} grants")
+                    session.commit()
+                    session.begin()
+                    session.refresh(grant_search_query)
 
-        logging.info(f"Done processing {len(grants)} grants in query_processor")
-        grant_search_query.complete = True
-        session.commit()
+            logging.info(f"Done processing {len(grants)} grants in query_processor")
+            grant_search_query.complete = True
+            session.commit()
+    except Exception as e:
+        import traceback
+
+        logger.error(f"Stack trace:\n{traceback.format_exc()}")
+        logger.error(f"Error processing query {query_id}: {e}")
 
 
 def create_query(query: str) -> int:
