@@ -160,9 +160,9 @@ export default function Grants(): React.ReactElement {
       }
       setQueryId(queryId);
       const newUrl = `${window.location.pathname}?queryId=${queryId}`;
-        window.history.pushState({}, '', newUrl);
-        setGrants([]);
-        setSamplingFraction(1.0);
+      window.history.pushState({}, '', newUrl);
+      setGrants([]);
+      setSamplingFraction(1.0);
     } catch (error) {
       console.error('Error fetching grants by text:', error);
       setLoading(false);
