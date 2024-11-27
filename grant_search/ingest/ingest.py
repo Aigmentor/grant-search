@@ -23,7 +23,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def xml_to_dict(element):
+def xml_string_to_dict(xml_string: str):
+    tree = ET.fromstring(xml_string)
+    return _xml_to_dict(tree)
+
+
+def _xml_to_dict(element):
     result = {}
     # Add element attributes if any exist
     if element.attrib:
@@ -31,7 +36,7 @@ def xml_to_dict(element):
 
     # Handle child elements
     for child in element:
-        child_dict = xml_to_dict(child)
+        child_dict = _xml_to_dict(child)
         child_tag = child.tag
 
         if child_tag in result:
@@ -120,8 +125,7 @@ class Ingester:
 
     def process_file(self, file_name, content):
         if file_name.endswith(".xml"):
-            tree = ET.fromstring(content)
-            data = xml_to_dict(tree)
+            data = xml_string_to_dict(content)
             # For NSF data:
             award = data["Award"]
             award_id = award["AwardID"]

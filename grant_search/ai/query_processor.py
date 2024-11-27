@@ -1,8 +1,6 @@
 from datetime import datetime
 import logging
-from concurrent.futures import Future
 from threading import Thread
-from typing import Dict, List, Optional, Tuple
 
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.db.database import get_session
@@ -30,6 +28,7 @@ def _run_query(query_id: int):
                 session.begin()
                 session.refresh(grant_search_query)
 
+        logging.info(f"Done processing {len(grants)} grants in query_processor")
         grant_search_query.complete = True
         session.commit()
 

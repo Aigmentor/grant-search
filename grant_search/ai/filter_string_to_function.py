@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import os
 import random
 import traceback
@@ -8,6 +9,7 @@ from datetime import datetime
 import logging
 
 from sqlalchemy.orm import undefer
+from sqlalchemy.orm.query import Query
 
 from grant_search.ai.common import ai_client, format_for_llm
 from grant_search.db.database import get_session
@@ -19,6 +21,7 @@ from grant_search.db.models import (
     GrantDerivedData,
     GrantSearchQuery,
 )
+from grant_search.ingest.ingest import xml_string_to_dict
 
 # logging.getLogger("instructor").setLevel(logging.DEBUG)
 
@@ -26,6 +29,8 @@ TOP_LEVEL_MODEL = "gpt-4o"
 FILTER_MODEL = "gpt-4o-mini"
 
 logger = logging.getLogger(__name__)
+
+GRANT_LIMIT = 1200
 
 
 class LinearSearchFunction(BaseModel):
@@ -92,7 +97,7 @@ class SearchFunction(LinearSearchFunction):
 
 class GrantFilter(BaseModel):
     reason: str = Field(
-        description="Reason for the answer. This parameter must be first"
+        description="Reason for the answer. This parameter must be first. Should be a short sentence or two, no more than 50 tokens"
     )
     result: bool = Field(description="True/False answer to the question")
 
@@ -117,7 +122,7 @@ def _get_search_function(text: str) -> SearchFunction:
 def _filter_grants_from_linear(
     session,
     lsf: LinearSearchFunction,
-) -> List[Grant]:
+) -> Query:
     """
     Filter grants query by LinearSearchFunction
 
@@ -173,7 +178,9 @@ def _filter_grants_from_linear(
         if lsf.carbon is not None:
             query = query.filter(GrantDerivedData.carbon == lsf.carbon)
 
-    return query.all()
+    query = query.order_by(Grant.amount.desc())
+
+    return query
 
 
 def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, str]:
@@ -184,7 +191,19 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
     The response must be in JSON format.
     """
     try:
-        messages = format_for_llm(prompt, f'grant_description: \n"{grant.raw_text}"')
+        grant_json = xml_string_to_dict(grant.raw_text)
+        award = grant_json["Award"]
+        grant_data = {
+            "AwardID": award["AwardID"],
+            "AwardTitle": award["AwardTitle"],
+            "AwardAmount": award["AwardAmount"],
+            "AbstractNarration": award["AbstractNarration"],
+            "Investigator": award["Investigator"],
+        }
+
+        messages = format_for_llm(
+            prompt, f'grant_description: \n"{json.dumps(grant_data)}"'
+        )
         result = ai_client.chat.completions.create(
             model=FILTER_MODEL,
             messages=messages,
@@ -208,12 +227,13 @@ def query_by_text(
     session.commit()
     session.refresh(query)
     query_session = get_session()
-    grants = _filter_grants_from_linear(session=query_session, lsf=search_function)
+    sql_query = _filter_grants_from_linear(session=query_session, lsf=search_function)
+    grants_count = sql_query.count()
+    grants = sql_query.limit(GRANT_LIMIT).all()
 
-    if len(grants) > 500:
-        logger.info(f"Sampling down from {len(grants)} to 500 grants")
-        sampling_fraction = 500.0 / len(grants)
-        grants = random.sample(grants, k=int(len(grants) * sampling_fraction))
+    if grants_count > GRANT_LIMIT:
+        logger.info(f"Sampling down from {grants_count} to {GRANT_LIMIT} grants")
+        sampling_fraction = GRANT_LIMIT / grants_count
     else:
         sampling_fraction = 1.0
 
@@ -222,7 +242,7 @@ def query_by_text(
     session.commit()
     session.refresh(query)
 
-    with ThreadPoolExecutor(max_workers=200) as executor:
+    with ThreadPoolExecutor(max_workers=502) as executor:
         # Create list of futures for each grant query
         logging.info(f"{len(grants)} grants to scan")
         futures = [
@@ -237,13 +257,17 @@ def query_by_text(
         session.refresh(query)
         logging.info(f"Submitted {len(grants)} for analysis")
         # Process results as they complete
-        for i, future in enumerate(as_completed(futures)):
+        for i, future in enumerate(futures):
             try:
-                grant, included, reason = future.result()
+                grant, included, reason = future.result(timeout=10)
                 if included:
-                    # reference grant.data_source.gency totrigger a load
                     grant.data_source.agency
                     yield ((grant, reason))
+
+                if i % 40 == 39:
+                    logger.info(f"Processed {i + 1} grants")
             except Exception as e:
                 logger.error(f"Stack trace:\n{traceback.format_exc()}")
                 logger.error(f"Error processing grant {grant.id}: {e}")
+
+        logger.info("Done processing all grants")
