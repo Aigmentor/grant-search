@@ -17,123 +17,146 @@ interface Grant {
 }
 
 let downloadedGrants: Grant[] = [];
-const columns: ColumnsType<Grant> = [
-  {
-    title: 'Afuera',
-    key: 'afuera', 
-    render: () => (
-      <Button
-        type="primary"
-        onClick={() => {
-          const overlay = document.createElement('div');
-          overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-          `;
-          const image = Math.random() < 0.5 ? "/static/javier-chainsaw.gif" : "/static/javier-milei-afuera.gif"
+const afueraColumn: ColumnsType<Grant>[0] = {
+  title: 'Afuera',
+  key: 'afuera', 
+  render: () => (
+    <Button
+      type="primary"
+      onClick={() => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.8);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        `;
+        const image = Math.random() < 0.5 ? "/static/javier-chainsaw.gif" : "/static/javier-milei-afuera.gif"
 
-          overlay.innerHTML = `
-            <div style="display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; background: white; border-radius: 8px;">
-              <img 
-                width="500" 
-                src="${image}"
-                alt="Javier Milei gif"
-              />
-              <div style="display: flex; gap: 10px;">
-                <button 
-                  style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
-                  onclick="window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')"
-                >
-                  DOGE
-                </button>
-                <button
-                  style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
-                  onclick="this.closest('.overlay').remove()"
-                >
-                  Sorry, I like waste
-                </button>
-              </div>
+        overlay.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; background: white; border-radius: 8px;">
+            <img 
+              width="500" 
+              src="${image}"
+              alt="Javier Milei gif"
+            />
+            <div style="display: flex; gap: 10px;">
+              <button 
+                style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
+                onclick="window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')"
+              >
+                DOGE
+              </button>
+              <button
+                style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
+                onclick="this.closest('.overlay').remove()"
+              >
+                Sorry, I like waste
+              </button>
             </div>
-          `;
+          </div>
+        `;
 
-          document.body.appendChild(overlay);
-          overlay.className = 'overlay';
-          
-          overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-              overlay.remove();
-            }
-          });
-        }}
+        document.body.appendChild(overlay);
+        overlay.className = 'overlay';
+        
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+          }
+        });
+      }}
+    >
+      Afuera
+    </Button>
+  ),
+};
+
+const titleColumn: ColumnsType<Grant>[0] = {
+  title: 'Title',
+  dataIndex: 'title',
+  key: 'title',
+  render: (title: string, record: Grant) => (
+    <span> {title}
+    <a href={record.awardUrl} target="_blank" rel="noopener noreferrer">
+      [link]
+    </a>
+    </span>
+  ),
+};
+
+const agencyColumn: ColumnsType<Grant>[0] = {
+  title: 'Agency',
+  dataIndex: 'agency',
+  key: 'agency',
+};
+
+const dataSourceColumn: ColumnsType<Grant>[0] = {
+  title: 'Data Source',
+  dataIndex: 'datasource',
+  key: 'datasource',
+};
+
+const amountColumn: ColumnsType<Grant>[0] = {
+  title: 'Amount',
+  dataIndex: 'amount',
+  key: 'amount',
+  defaultSortOrder: 'descend',
+  sorter: (a: Grant, b: Grant) => (a.amount || 0) - (b.amount || 0),
+  render: (amount: number) => `$${amount?.toLocaleString() || 'N/A'}`,
+};
+
+const endDateColumn: ColumnsType<Grant>[0] = {
+  title: 'End Date',
+  dataIndex: 'endDate',
+  key: 'endDate',
+};
+
+const descriptionColumn: ColumnsType<Grant>[0] = {
+  title: 'Description',
+  dataIndex: 'description',
+  key: 'description',
+  render: (description: string) => (
+    <Collapse ghost>
+      <Collapse.Panel 
+        header={description?.substring(0, 50) + '...'} 
+        key="1"
       >
-        Afuera
-      </Button>
-    ),
-  },
-  {
-    title: 'Title',
-    dataIndex: 'title',
-    key: 'title',
-    render: (title: string, record: Grant) => (
-      <span> {title}
-      <a href={record.awardUrl} target="_blank" rel="noopener noreferrer">
-        [link]
-      </a>
-      </span>
-    ),
-  },
-  {
-    title: 'Agency',
-    dataIndex: 'agency',
-    key: 'agency',
-  },
-  {
-    title: 'Data Source',
-    dataIndex: 'datasource',
-    key: 'datasource',
-  },
-  {
-    title: 'Amount',
-    dataIndex: 'amount',
-    key: 'amount',
-    defaultSortOrder: 'descend',
-    sorter: (a: Grant, b: Grant) => (a.amount || 0) - (b.amount || 0),
-    render: (amount: number) => `$${amount?.toLocaleString() || 'N/A'}`,
-  },
-  {
-    title: 'End Date',
-    dataIndex: 'endDate',
-    key: 'endDate',
-  },
-  {
-    title: 'Description',
-    dataIndex: 'description',
-    key: 'description',
-    render: (description: string) => (
-      <Collapse ghost>
-        <Collapse.Panel 
-          header={description?.substring(0, 50) + '...'} 
-          key="1"
-        >
-          {description}
-        </Collapse.Panel>
-      </Collapse>
-    ),
-  },
-  {
-    title: 'Reason',
-    dataIndex: 'reason',
-    key: 'reason',
-  },
- ];
+        {description}
+      </Collapse.Panel>
+    </Collapse>
+  ),
+};
+
+const reasonColumn: ColumnsType<Grant>[0] = {
+  title: 'Reason',
+  dataIndex: 'reason',
+  key: 'reason',
+};
+
+const columns: ColumnsType<Grant> = [
+  afueraColumn,
+  titleColumn,
+  agencyColumn,
+  dataSourceColumn,
+  amountColumn,
+  endDateColumn,
+  descriptionColumn,
+  reasonColumn
+];
+
+const isMobile = () => {
+  if (typeof window !== 'undefined') {
+    return window.innerWidth <= 768;
+  }
+  return false;
+};
 
 export default function Grants(): React.ReactElement {
   const [queryStatus, setQueryStatus] = useState(undefined);
@@ -147,6 +170,24 @@ export default function Grants(): React.ReactElement {
     datasource: '',
     text: ''
   });
+  const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (isMobile()) {
+        setActiveColumns([
+          titleColumn,
+          amountColumn, 
+          descriptionColumn,
+          afueraColumn,
+        ]);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const submitSearch = async (queryText: string, queryId?: number) => {
     try {
@@ -382,7 +423,7 @@ export default function Grants(): React.ReactElement {
         </span>}
 
       <Table
-        columns={columns}
+        columns={activeColumns}
         dataSource={grants}
         loading={loading && (grants && grants.length === 0)}
         rowKey="id"
