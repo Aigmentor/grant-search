@@ -292,63 +292,74 @@ export default function Grants(): React.ReactElement {
 
     return (
     <div style={{ margin: '40px 20px' }}>
-      <h1>Grants</h1>
-      <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
-        <Input.TextArea 
-          placeholder="Describe the grants you're looking for..." 
-          rows={3}
-          value={filters.text}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              submitSearch(filters.text);
-            }
-          }}
-          onChange={(e) => setFilters(prev => ({ ...prev, text: e.target.value }))}
-        />
-                <Button
-          type="primary"
-          onClick={() => submitSearch(filters.text)}
-        >
-        {loading ? 'Searching...' : 'Search'}
-        </Button>
-        
-        <div style={{ position: 'relative', marginBottom: '20px' }}>
-          {loading && (
-            <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '-20px', fontSize: '12px', color: '#666' }}>
-              {queryStatus.toUpperCase().replace('_', ' ')}
-            </div>
-          )}
-          <div style={progressBarStyle}></div>
-        </div>
+      <h1>D.O.G.E. Afuera</h1>
+      Find wasteful grants make them go afuera!
+      <div style={{ display: 'flex', gap: '20px' }}>
+        <Space direction="vertical" style={{ width: '50%', marginBottom: 16 }}>
+          <Input.TextArea 
+            placeholder="Describe the grants you're looking for..." 
+            rows={3}
+            value={filters.text}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitSearch(filters.text);
+              }
+            }}
+            onChange={(e) => setFilters(prev => ({ ...prev, text: e.target.value }))}
+          />
+          <Button
+            type="primary"
+            onClick={() => submitSearch(filters.text)}
+          >
+          {loading ? 'Searching...' : 'Search'}
+          </Button>
+          
+          <div style={{ position: 'relative', marginBottom: '20px' }}>
+            {loading && (
+              <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '-20px', fontSize: '12px', color: '#666' }}>
+                {queryStatus.toUpperCase().replace('_', ' ')}
+              </div>
+            )}
+            <div style={progressBarStyle}></div>
+          </div>
 
-        <Collapse style={{ marginBottom: 16 }}>
-          <Collapse.Panel header="Search Examples" key="1">
-            <ul style={{ margin: 0, paddingLeft: 20 }}>
-              {[
-                "Find NSF grants about BiPOCS and renewable energy",
-                "Show me NIH grants related to cancer research [NIH data not loaded]", 
-                "Find grants from the NSF about Global Warming and women's rights",
-                "Grants featuring womens studies and Physics granted in June 2025",
-                "Find grants awarded to \"Evan Flach\" related to DEI",
-                "Show grants focused on DEI initiatives with budgets over $100,000",
-                "Find NSF grants about artificial intelligence from datasource \"NSF 2024\""
-              ].map((example, i) => (
-                <li 
-                  key={i}
-                  onClick={() => {
-                    setFilters(prev => ({...prev, text: example}));
-                    submitSearch(example);
-                  }}
-                  style={{cursor: 'pointer'}}
-                >
-                  {example}
-                </li>
-              ))}
-            </ul>
-          </Collapse.Panel>
-        </Collapse>
-      </Space>
+          <Collapse style={{ marginBottom: 16 }}>
+            <Collapse.Panel header="Search Examples" key="1">
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {[
+                  "Find NSF grants about BiPOCS and renewable energy",
+                  "Show me NIH grants related to cancer research [NIH data not loaded]", 
+                  "Find grants from the NSF about Global Warming and women's rights",
+                  "Grants featuring womens studies and Physics granted in June 2025",
+                  "Find grants awarded to \"Evan Flach\" related to DEI",
+                  "Show grants focused on DEI initiatives with budgets over $100,000",
+                  "Find NSF grants about artificial intelligence from datasource \"NSF 2024\""
+                ].map((example, i) => (
+                  <li 
+                    key={i}
+                    onClick={() => {
+                      setFilters(prev => ({...prev, text: example}));
+                      submitSearch(example);
+                    }}
+                    style={{cursor: 'pointer'}}
+                  >
+                    {example}
+                  </li>
+                ))}
+              </ul>
+            </Collapse.Panel>
+          </Collapse>
+        </Space>
+
+        <div style={{ width: '50%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+          <img 
+            src="/static/javier_afuera.png" 
+            alt="Afuera Lines"
+            style={{ maxWidth: '100%', height: 'auto' }}
+          />
+        </div>
+      </div>
         {samplingFraction < 1.0 && <span>Data estimated based on sampling fraction of {Math.round(samplingFraction * 100)}% </span>}
         <br/>
           {grants && grants.length > 0 && <span>
