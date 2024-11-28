@@ -211,6 +211,7 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
             model=FILTER_MODEL,
             messages=messages,
             response_model=GrantFilter,
+            timeout=20,  # 20 second timeout
         )
         return grant, result.result, result.reason
     except Exception as e:
@@ -270,11 +271,12 @@ def query_by_text(
                 if i % 40 == 39:
                     logger.info(f"Processed {i + 1} grants")
             except Exception as e:
-                future.cancel()
-                logger.error(f"Stack trace:\n{traceback.format_exc()}")
+                cancelled = future.cancel()
+                logger.info(f"Cancelled: {cancelled}")
+                # logger.error(f"Stack trace:\n{traceback.format_exc()}")
                 logger.error(f"Error processing grant {grant.id}: {e}")
         logger.info("Done processing all grants1")
-        executor.shutdown()
+        executor.shutdown(wait=False, cancel_futures=True)
 
     logger.info("Done processing all grants2")
     threads = threading.enumerate()
