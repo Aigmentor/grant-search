@@ -36,3 +36,34 @@ body {
   color: gray;  
 }
 
+
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+.grant-spacing {
+  width: 70%;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .grant-spacing {
+    width: 100%;
+  }
+}

@@ -289,13 +289,24 @@ export default function Grants(): React.ReactElement {
     display: loading ? 'block' : 'none'
   };
 
+  const afueraImage = <img 
+      src="/static/javier_afuera.png" 
+      alt="Afuera Lines"
+      style={{
+        width: '100%',
+        height: 'auto'
+      }}
+    />
 
     return (
     <div style={{ margin: '40px 20px' }}>
       <h1>D.O.G.E. Afuera</h1>
-      Find wasteful grants make them go afuera!
+      Find wasteful grants make them go...
+      <div className="mobile-only">
+        {afueraImage}
+      </div>
       <div style={{ display: 'flex', gap: '20px' }}>
-        <Space direction="vertical" style={{ width: '50%', marginBottom: 16 }}>
+        <Space direction="vertical" className="grant-spacing">
           <Input.TextArea 
             placeholder="Describe the grants you're looking for..." 
             rows={3}
@@ -352,12 +363,14 @@ export default function Grants(): React.ReactElement {
           </Collapse>
         </Space>
 
-        <div style={{ width: '50%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
-          <img 
-            src="/static/javier_afuera.png" 
-            alt="Afuera Lines"
-            style={{ maxWidth: '100%', height: 'auto' }}
-          />
+        <div className="desktop-only" style={{ 
+            width: '40%',
+            // display: 'flex',
+            justifyContent: 'right', 
+            alignItems: 'right',
+            // margin: '0 auto',
+            // order: 2          
+        }}> {afueraImage}
         </div>
       </div>
         {samplingFraction < 1.0 && <span>Data estimated based on sampling fraction of {Math.round(samplingFraction * 100)}% </span>}
