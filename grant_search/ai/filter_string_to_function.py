@@ -216,7 +216,7 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
         return grant, result.result, result.reason
     except Exception as e:
         logger.error(f"Error filtering grant {e}")
-        return False, "Error"
+        return grant, False, "Error"
 
 
 def query_by_text(
