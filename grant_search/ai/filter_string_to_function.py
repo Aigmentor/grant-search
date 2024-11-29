@@ -82,6 +82,10 @@ class LinearSearchFunction(BaseModel):
         description="Filter for (True) or out (False)for grants which are primarily about CO2/global warming."
     )
 
+    amount_min: Optional[float] = Field(description="Minimum amount for the grant")
+
+    amount_max: Optional[float] = Field(description="Maximum amount for the grant")
+
 
 class SearchFunction(LinearSearchFunction):
     grant_question: Optional[str] = Field(
@@ -158,6 +162,12 @@ def _filter_grants_from_linear(
 
     if lsf.start_date_before:
         query = query.filter(Grant.start_date >= lsf.start_date_after)
+
+    if lsf.amount_min:
+        query = query.filter(Grant.amount >= lsf.amount_min)
+
+    if lsf.amount_max:
+        query = query.filter(Grant.amount <= lsf.amount_max)
 
     if (
         lsf.dei_status is not None

@@ -395,9 +395,11 @@ export default function Grants(): React.ReactElement {
       <div style={{ margin: '40px 20px' }}>
         <Alert
           message="Error"
-          description="The query timed out. Please try again with a more specific search."
+          description="The query timed out.This can happen due to load or if the AI backends are busy.
+          Queries can be sped up by limiting the search domain (such as including funding minimums or maximums or restricting to specific months."
           type="error"
           showIcon
+          closable={true}
         />
       </div>
     }
