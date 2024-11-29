@@ -409,7 +409,7 @@ export default function Grants(): React.ReactElement {
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {[
                   "Find NSF grants about BiPOCS and renewable energy",
-                  "Show me NIH grants related to cancer research [NIH data not loaded]", 
+                  "Show me NIH grants >$500Krelated to cancer research", 
                   "Find grants from the NSF about Global Warming and women's rights",
                   "Grants featuring womens studies and Physics granted in June 2025",
                   "Find grants awarded to \"Evan Flach\" related to DEI",
