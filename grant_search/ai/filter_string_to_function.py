@@ -1,9 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-import os
-import random
 import threading
-import traceback
 from typing import Generator, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -258,7 +255,7 @@ def query_by_text(
     session.commit()
     session.refresh(query)
 
-    with ThreadPoolExecutor(max_workers=412) as executor:
+    with ThreadPoolExecutor(max_workers=612) as executor:
         # Create list of futures for each grant query
         logging.info(f"{len(grants)} grants to scan")
         futures = [

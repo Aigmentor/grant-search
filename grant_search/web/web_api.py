@@ -146,7 +146,7 @@ def get_grants_query_status():
             return jsonify({"error": f"No such query: {request_data['queryId']}"}), 400
 
         if not query.complete and query.timestamp < datetime.now() - timedelta(
-            minutes=1
+            seconds=75
         ):
             query.status = "timed_out"
             session.commit()
