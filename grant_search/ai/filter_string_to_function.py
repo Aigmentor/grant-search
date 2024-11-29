@@ -194,19 +194,21 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
     The response must be in JSON format.
     """
     try:
-        grant_json = xml_string_to_dict(grant.raw_text)
-        award = grant_json["Award"]
-        grant_data = {
-            "AwardID": award["AwardID"],
-            "AwardTitle": award["AwardTitle"],
-            "AwardAmount": award["AwardAmount"],
-            "AbstractNarration": award["AbstractNarration"],
-            "Investigator": award["Investigator"],
-        }
+        if grant.data_source.agency == "NSF":
+            grant_json = xml_string_to_dict(grant.raw_text)
+            award = grant_json["Award"]
+            grant_data = {
+                "AwardID": award["AwardID"],
+                "AwardTitle": award["AwardTitle"],
+                "AwardAmount": award["AwardAmount"],
+                "AbstractNarration": award["AbstractNarration"],
+                "Investigator": award["Investigator"],
+            }
+            grant_text = json.dumps(grant_data)
+        else:
+            grant_text = grant.raw_text
 
-        messages = format_for_llm(
-            prompt, f'grant_description: \n"{json.dumps(grant_data)}"'
-        )
+        messages = format_for_llm(prompt, f'grant_description: \n"{grant_text}"')
         result = ai_client.chat.completions.create(
             model=FILTER_MODEL,
             messages=messages,
@@ -215,7 +217,7 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
         )
         return grant, result.result, result.reason
     except Exception as e:
-        logger.error(f"Error filtering grant {e}")
+        logger.error(f"Error filtering grant {e}: {grant_text}")
         return grant, False, "Error"
 
 
@@ -263,6 +265,7 @@ def query_by_text(
         # Process results as they complete
         for i, future in enumerate(futures):
             try:
+                grant = None
                 grant, included, reason = future.result(timeout=12)
                 if included:
                     grant.data_source.agency
@@ -274,7 +277,9 @@ def query_by_text(
                 cancelled = future.cancel()
                 logger.info(f"Cancelled: {cancelled}")
                 # logger.error(f"Stack trace:\n{traceback.format_exc()}")
-                logger.error(f"Error processing grant {grant.id}: {e}")
+                logger.error(
+                    f"Error processing grant {grant.id if grant else 'unknown'}: {e}"
+                )
         logger.info("Done processing all grants1")
         executor.shutdown(wait=False, cancel_futures=True)
 

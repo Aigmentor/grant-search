@@ -120,7 +120,12 @@ class Grant(Base):
     )
 
     def get_award_url(self):
-        return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false"
+        if self.data_source.agency.name == "NSF":
+            return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false"
+        elif self.data_source.agency.name == "NIH":
+            return f"https://reporter.nih.gov/project-details/{self.award_id}"
+        else:
+            return None
 
 
 class DEIStatus(enum.Enum):

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from functools import wraps
 import logging
 from threading import Thread
@@ -91,6 +92,42 @@ def get_grants_by_text():
         return jsonify({"queryId": query_id})
 
 
+def json_for_query(query, start_index):
+    if query.reasons is None and not query.complete:
+        results = []
+    elif query.reasons is None or len(query.reasons) == 0:
+        results = []
+    else:
+        results = zip(query.grants, query.reasons)
+
+    output = []
+    # Skip entries before start_index
+    results = list(results)[start_index:]
+    for result in results:
+        grant, reason = result
+        data_source = grant.data_source
+        output.append(
+            {
+                "id": str(grant.id),
+                "title": grant.title,
+                "agency": data_source.agency.name,
+                "datasource": data_source.name,
+                "amount": grant.amount,
+                "endDate": grant.end_date.strftime("%Y-%m-%d"),
+                "description": grant.description,
+                "reason": reason,
+                "awardUrl": grant.get_award_url(),
+            }
+        )
+
+    return {
+        "status": "success" if query.complete else query.status,
+        "sampleFraction": query.sampling_fraction,
+        "queryText": query.query_text,
+        "results": output,
+    }
+
+
 @api.route("/grants_query_status", methods=["POST"])
 def get_grants_query_status():
     request_data = request.get_json()
@@ -108,54 +145,14 @@ def get_grants_query_status():
         if query is None:
             return jsonify({"error": f"No such query: {request_data['queryId']}"}), 400
 
-        if query.reasons is None and not query.complete:
-            return (
-                jsonify(
-                    {
-                        "status": query.status,
-                        "sampleFraction": query.sampling_fraction,
-                        "queryText": query.query_text,
-                        "results": [],
-                    }
-                ),
-                200,
-            )
-        if query.reasons is None or len(query.reasons) == 0:
-            results = []
-        else:
-            results = zip(query.grants, query.reasons)
+        if not query.complete and query.timestamp < datetime.now() - timedelta(
+            minutes=1
+        ):
+            query.status = "timed_out"
+            session.commit()
+            session.refresh(query)
 
-        output = []
-        # Skip entries before start_index
-        results = list(results)[start_index:]
-        for result in results:
-            grant, reason = result
-            data_source = grant.data_source
-            output.append(
-                {
-                    "id": str(grant.id),
-                    "title": grant.title,
-                    "agency": data_source.agency.name,
-                    "datasource": data_source.name,
-                    "amount": grant.amount,
-                    "endDate": grant.end_date.strftime("%Y-%m-%d"),
-                    "description": grant.description,
-                    "reason": reason,
-                    "awardUrl": grant.get_award_url(),
-                }
-            )
-
-        return (
-            jsonify(
-                {
-                    "status": "success" if query.complete else "in_progress",
-                    "sampleFraction": query.sampling_fraction,
-                    "queryText": query.query_text,
-                    "results": output,
-                }
-            ),
-            200,
-        )
+        return jsonify(json_for_query(query, start_index)), 200
 
 
 @api.route("/grants", methods=["GET"])

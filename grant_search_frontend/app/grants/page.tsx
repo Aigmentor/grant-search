@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Select, Space, Button, Input, Collapse } from "antd";
+import { Table, Select, Space, Button, Input, Collapse, Alert } from "antd";
 import type { ColumnsType } from 'antd/es/table';
 
 interface Grant {
@@ -143,7 +143,6 @@ const reasonColumn: ColumnsType<Grant>[0] = {
 const columns: ColumnsType<Grant> = [
   afueraColumn,
   titleColumn,
-  agencyColumn,
   dataSourceColumn,
   amountColumn,
   endDateColumn,
@@ -171,6 +170,17 @@ export default function Grants(): React.ReactElement {
     text: ''
   });
   const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (queryStatus === 'timed_out') {
+      setTimedOut(true);
+      setLoading(false);
+    } else {
+      setTimedOut(false);
+    }
+  }, [queryStatus]);
+
 
   useEffect(() => {
     const handleResize = () => {
@@ -261,9 +271,15 @@ export default function Grants(): React.ReactElement {
         if (queryText && filters.text !== queryText) {
           setFilters(prev => ({ ...prev, text: queryText }));
         }
-        setQueryStatus(response.data.status == 'in_progress'? 'streaming results...': response.data.status);
-        const inProgress = response.data.status === 'in_progress' && response.data.results;
-        const success = response.data.status === 'success';
+        const status = response.data.status;
+        if (status == 'in_progress') {
+          setQueryStatus('streaming results...');
+        } else {
+          setQueryStatus(status);
+        }
+        const success = status === 'success';
+        const timedOut = status === 'timed_out';
+        const inProgress = !success && response.data.results;
         if (success || inProgress) {
           // console.log('grants', response.data.results);
           downloadedGrants.push(...response.data.results);
@@ -274,7 +290,7 @@ export default function Grants(): React.ReactElement {
           }
           setSamplingFraction(response.data.sampleFraction);
           console.log(`Status: ${response.data.status} ${success}`)
-          if (success) {
+          if (success || timedOut) {
             downloadedGrants = [];
             setLoading(false);
             setQueryId(undefined);
@@ -375,6 +391,16 @@ export default function Grants(): React.ReactElement {
             )}
             <div style={progressBarStyle}></div>
           </div>
+    {timedOut &&
+      <div style={{ margin: '40px 20px' }}>
+        <Alert
+          message="Error"
+          description="The query timed out. Please try again with a more specific search."
+          type="error"
+          showIcon
+        />
+      </div>
+    }
 
           <Collapse style={{ marginBottom: 16 }}>
             <Collapse.Panel header="Search Examples" key="1">
