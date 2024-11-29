@@ -14,6 +14,7 @@ import ssl
 
 from grant_search.db.models import Agency, DataSource, Grant, Grantee
 from grant_search.db.database import Session
+from grant_search.ingest.nih import API_URL, get_nih_grants_by_year
 from grant_search.ingest.send_to_ai import SendToAI
 
 
@@ -66,6 +67,14 @@ class Ingester:
         self.source = source
         self.agency = agency
         self.source_name = source_name
+
+        if self.agency != "NIH":
+            assert self.source, "Source (--input_url) is required for non-NIH data"
+        else:
+            self.source = f"{API_URL}?year={self.source_name}"
+
+        if self.agency not in ["NIH", "NSF"]:
+            raise Exception("Agency must be in [NIH, NSF]")
 
     def _get_content(self) -> tuple[io.BytesIO, str]:
         # Check if source is URL or local file
@@ -171,6 +180,65 @@ class Ingester:
             self.session.commit()
             logger.info(f"Created grant: {title}")
 
+    def process_nih(self):
+        year = self.source_name.split(" ")[1]
+        logger.info(f"Processing NIH grants for {year}")
+        for data in get_nih_grants_by_year(year):
+            try:
+                award_id = data["appl_id"]
+                title = data["project_title"]
+                amount = data["award_amount"] or 0.0
+                description = data["abstract_text"]
+                investigators = data["principal_investigators"]
+                if type(investigators) != list:
+                    investigators = [investigators]
+                investigators = [
+                    x["first_name"] + " " + x["last_name"] for x in investigators
+                ]
+                # Parse dates from NIH format
+                start_date = datetime.strptime(
+                    data["project_start_date"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+                end_date = datetime.strptime(
+                    data["project_end_date"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+
+                # Create grantees from investigators
+                grantees = []
+                for investigator in investigators:
+                    # Check if grantee already exists
+                    grantee = (
+                        self.session.query(Grantee)
+                        .filter(Grantee.name == investigator)
+                        .first()
+                    )
+                    if not grantee:
+                        logger.info(f"Creating new grantee: {investigator}")
+                        grantee = Grantee(name=investigator)
+                        self.session.add(grantee)
+                    grantees.append(grantee)
+                self.session.commit()
+
+                grant = Grant(
+                    title=title,
+                    start_date=start_date,
+                    end_date=end_date,
+                    amount=float(amount),
+                    description=description,
+                    award_id=award_id,
+                    data_source_id=self.data_source.id,
+                    raw_text=json.dumps(data).encode(),
+                )
+                # Add grantees to grant
+                grant.grantees.extend(grantees)
+                self.session.add(grant)
+                self.session.commit()
+                logger.info(f"Created grant: {title}")
+            except Exception as e:
+                logger.error(
+                    f"Error creating grant: {e} in {json.dumps(data, indent=2)}"
+                )
+
     def ingest(self):
         self.session = Session()
         session = self.session
@@ -181,15 +249,14 @@ class Ingester:
             agency = Agency(name=self.agency)
             session.add(agency)
             session.commit()
+            session.refresh(agency)
 
-        self.data_source = (
-            session.query(DataSource)
-            .filter(
-                DataSource.name == self.source_name
-                and DataSource.agency_id == agency.id
-            )
-            .first()
-            or session.query(DataSource)
+        print(f"agency: {agency.id}")
+        self.data_source = session.query(DataSource).filter(
+            DataSource.name == self.source_name and DataSource.agency_id == agency.id
+        ).first() or (
+            self.source
+            and session.query(DataSource)
             .filter(
                 DataSource.origin == self.source and DataSource.agency_id == agency.id
             )
@@ -221,19 +288,22 @@ class Ingester:
             session.commit()
             logger.info(f"Created data source: {self.source}")
 
-        file_content, filename = self._get_content()
+        if self.agency == "NIH":
+            self.process_nih()
+        else:
+            file_content, filename = self._get_content()
 
-        # Handle compressed files
-        if filename.endswith(".zip"):
-            self._handle_zip(filename, file_content)
+            # Handle compressed files
+            if filename.endswith(".zip"):
+                self._handle_zip(filename, file_content)
 
-        elif filename.endswith(".gz"):
-            file_content = io.BytesIO(gzip.decompress(file_content))
-            # Remove .gz
-            new_filename = self.source[0:-3]
-            self.process_file(new_filename, file_content)
+            elif filename.endswith(".gz"):
+                file_content = io.BytesIO(gzip.decompress(file_content))
+                # Remove .gz
+                new_filename = self.source[0:-3]
+                self.process_file(new_filename, file_content)
 
-        self.process_file(filename, file_content)
+            self.process_file(filename, file_content)
 
         # Process grants through AI after ingestion
 

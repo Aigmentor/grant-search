@@ -43,6 +43,7 @@ export default function Home() : React.ReactElement {
         >
           <Select placeholder="Select datasource type">
             <Select.Option value="NSF" default>NSF</Select.Option>
+            <Select.Option value="NIH" default>NIH</Select.Option>
           </Select>
         </Form.Item>
 

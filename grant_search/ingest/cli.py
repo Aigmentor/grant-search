@@ -11,7 +11,7 @@ if __name__ == "__main__":
     from grant_search.ingest.ingest import Ingester
 
     parser = argparse.ArgumentParser(description="Ingest grant data from a URL or file")
-    parser.add_argument("--input_url", help="URL or path to input file", required=True)
+    parser.add_argument("--input_url", help="URL or path to input file")
     parser.add_argument("--source_name", help="short name for source", required=True)
     parser.add_argument("--agency", help="Agency name", required=True)
 
