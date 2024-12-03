@@ -357,7 +357,7 @@ export default function Grants(): React.ReactElement {
 
     return (
     <div style={{ margin: '40px 20px' }}>
-      <h1>D.O.G.E. Afuera</h1>
+      <h1>DOGEFuera</h1>
       Find wasteful grants make them go...
       <div className="mobile-only">
         {afueraImage}
