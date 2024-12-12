@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from functools import wraps
 import logging
+import os
 from threading import Thread
 import traceback
 from flask import Blueprint, jsonify, request, session
@@ -192,3 +193,20 @@ def get_grants():
         logging.error(f"Stack trace:\n{traceback.format_exc()}")
         logging.error(f"Error getting grants: {str(e)}")
         return jsonify({"error": "Failed to get grants"}), 500
+
+
+@api.route("/user_status", methods=["GET"])
+def auth_status():
+    """Get current user's authentication status"""
+    try:
+        is_authenticated = "user" in session
+        return jsonify(
+            {
+                "loggedIn": is_authenticated,
+                "userEmail": session.get("user_email"),
+                "username": session.get("username"),
+            }
+        )
+    except Exception as e:
+        logging.error(f"Error checking auth status: {str(e)}")
+        return jsonify({"error": "Failed to check authentication status"}), 500

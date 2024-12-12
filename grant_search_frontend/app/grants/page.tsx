@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Select, Space, Button, Input, Collapse, Alert } from "antd";
 import type { ColumnsType } from 'antd/es/table';
+import LoginButton from "../components/login";
 
 interface Grant {
   id: string;
@@ -356,6 +357,8 @@ export default function Grants(): React.ReactElement {
     />
 
     return (
+      <>
+      <LoginButton />
     <div style={{ margin: '40px 20px' }}>
       <h1>DOGEFuera</h1>
       Find wasteful grants make them go...
@@ -462,5 +465,6 @@ export default function Grants(): React.ReactElement {
         }}
       />
     </div>
+    </>
   );
-} 
+}

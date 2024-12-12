@@ -16,6 +16,10 @@ const devConfig = {
 				destination: 'http://127.0.0.1:5000/api/:path*',
 			},
 			{
+				source: '/auth/:path*',
+				destination: 'http://127.0.0.1:5000/auth/:path*',
+			},
+			{
 				source: '/static/:path*',
 				destination: 'http://127.0.0.1:5000/static/:path*',
 			},
