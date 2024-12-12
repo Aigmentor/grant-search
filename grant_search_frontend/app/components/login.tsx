@@ -7,7 +7,7 @@ export default function LoginButton() {
     useEffect(() => {
       const checkLoginStatus = async () => {
         try {
-          const response = await fetch('api/user_status');
+          const response = await fetch('/api/user_status');
           const data = await response.json();
           setLoginStatus(data);
         } catch (err) {
