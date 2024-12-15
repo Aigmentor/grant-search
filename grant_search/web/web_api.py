@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
 
 from grant_search.ai.query_processor import create_query
-from grant_search.db.models import Grant, Agency, DataSource, GrantSearchQuery
+from grant_search.db.models import Grant, Agency, DataSource, GrantSearchQuery, User
 from grant_search.db.database import get_session
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.filter_grants import filter_grants_query
@@ -16,6 +16,15 @@ from grant_search.ingest.ingest import Ingester
 
 # XHR API for web app
 api = Blueprint("api", __name__)
+
+
+def check_auth():
+    if not session.get("user") and request.endpoint != "api.auth_status":
+        return jsonify({"error": "Not authorized"}), 401
+
+
+# Apply login_required decorator to all routes
+api.before_request(check_auth)
 
 
 @api.route("/upload_datasource", methods=["POST"])
@@ -87,9 +96,14 @@ def get_grants_by_text():
 
     text = request_data["text"]
 
-    with get_session() as session:
+    with get_session() as db_session:
+        user = (
+            db_session.query(User)
+            .filter(User.email == session.get("user_email"))
+            .first()
+        )
         # Query grants using the text filter
-        query_id = create_query(text)
+        query_id = create_query(text, user)
         return jsonify({"queryId": query_id})
 
 
@@ -210,3 +224,40 @@ def auth_status():
     except Exception as e:
         logging.error(f"Error checking auth status: {str(e)}")
         return jsonify({"error": "Failed to check authentication status"}), 500
+
+
+@api.route("/user_searches", methods=["GET"])
+def get_user_searches():
+    """Get saved searches for current user"""
+    try:
+        if "user_email" not in session:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        with get_session() as db_session:
+            user = (
+                db_session.query(User)
+                .filter(User.email == session.get("user_email"))
+                .first()
+            )
+
+            searches = (
+                db_session.query(GrantSearchQuery)
+                .filter(GrantSearchQuery.user_id == user.id)
+                .order_by(desc(GrantSearchQuery.created_at))
+                .all()
+            )
+
+            return jsonify(
+                [
+                    {
+                        "id": str(search.id),
+                        "query": search.query,
+                        "created_at": search.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                    for search in searches
+                ]
+            )
+
+    except Exception as e:
+        logging.error(f"Error getting user searches: {str(e)}")
+        return jsonify({"error": "Failed to get user searches"}), 500

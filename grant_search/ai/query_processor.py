@@ -4,7 +4,7 @@ from threading import Thread
 
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.db.database import get_session
-from grant_search.db.models import Grant, GrantSearchQuery
+from grant_search.db.models import Grant, GrantSearchQuery, User
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def _run_query(query_id: int):
         logger.error(f"Error processing query {query_id}: {e}")
 
 
-def create_query(query: str) -> int:
+def create_query(query: str, user: User) -> int:
     """Creates a new grant search query in the database and starts processing it asynchronously.
 
     Args:
@@ -66,7 +66,11 @@ def create_query(query: str) -> int:
             return existing_query.id
 
         grant_search_query = GrantSearchQuery(
-            complete=False, query=query, timestamp=datetime.now(), query_text=query
+            complete=False,
+            query=query,
+            timestamp=datetime.now(),
+            query_text=query,
+            user_id=user.id,
         )
         session.add(grant_search_query)
         session.commit()

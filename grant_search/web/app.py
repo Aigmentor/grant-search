@@ -96,6 +96,11 @@ def callback():
     user_email = userinfo.get("email")
     username = userinfo.get("nickname") or userinfo.get("name")
 
+    user = db.User.get_user_by_email(user_email)
+    if not user:
+        logging.info(f"Creating user {username} with email {user_email}")
+        user = db.User.create_user(username, user_email)
+
     # Store in session
     session["user_email"] = user_email
     session["username"] = username

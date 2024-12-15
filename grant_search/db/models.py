@@ -1,10 +1,8 @@
 import enum
-from typing import Type, TypeVar
+from typing import Optional, Type, TypeVar
 from sqlalchemy import (
     ARRAY,
-    JSON,
     DDL,
-    VARCHAR,
     Boolean,
     DateTime,
     Enum,
@@ -12,6 +10,7 @@ from sqlalchemy import (
     Index,
     LargeBinary,
     TypeDecorator,
+    UniqueConstraint,
     asc,
     Column,
     Integer,
@@ -40,6 +39,7 @@ def init_db():
     Base.metadata.create_all(database.engine)
 
 
+@declarative_mixin
 class TimestampMixin:
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_modified = Column(
@@ -176,7 +176,7 @@ grant_search_query_grants = Table(
 )
 
 
-class GrantSearchQuery(TimestampMixin, Base):
+class GrantSearchQuery(Base, TimestampMixin):
     __tablename__ = "grant_search_queries"
     id = Column(Integer, primary_key=True)
     query = Column(String)
@@ -187,3 +187,57 @@ class GrantSearchQuery(TimestampMixin, Base):
     complete = Column(Boolean)
     sampling_fraction = Column(Float)
     status = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user = relationship("User", backref="search_queries")
+
+
+class User(Base, TimestampMixin):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+
+    __table_args__ = (Index("idx_user_email", "email"),)
+
+    @staticmethod
+    def get_user_by_email(email: str) -> Optional["User"]:
+        return database.get_session().query(User).filter(User.email == email).first()
+
+    @staticmethod
+    def create_user(username: str, email: str) -> "User":
+        """Create a new user with the given username and email.
+
+        Args:
+            username: The username for the new user
+            email: The email address for the new user
+
+        Returns:
+            The newly created User object
+        """
+
+        user = User(username=username, email=email)
+        session = database.get_session()
+        session.add(user)
+        session.commit()
+        return user
+
+
+class FavoritedGrant(Base, TimestampMixin):
+    __tablename__ = "favorited_grants"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    grant_id = Column(Integer, ForeignKey("grants.id"), nullable=False)
+    comment = Column(String)
+
+    search_query_id = Column(Integer, ForeignKey("grant_search_queries.id"))
+    search_query = relationship("GrantSearchQuery", backref="favorited_from_query")
+
+    user = relationship("User", backref="favorited_grants")
+    grant = relationship("Grant", backref="favorited_by")
+
+    __table_args__ = (
+        # Ensure a user can only favorite a grant once
+        UniqueConstraint("user_id", "grant_id", name="unique_user_grant_favorite"),
+        # Index for faster lookups of a user's favorites
+        Index("idx_favorited_grants_user", "user_id"),
+    )

@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Select, Space, Button, Input, Collapse, Alert } from "antd";
+import { Table, Select, Space, Button, Input, Collapse, Alert, Spin } from "antd";
 import type { ColumnsType } from 'antd/es/table';
 import LoginButton from "../components/login";
+import UserSearches from "../components/userSearches";
 
 interface Grant {
   id: string;
@@ -433,6 +434,7 @@ export default function Grants(): React.ReactElement {
               </ul>
             </Collapse.Panel>
           </Collapse>
+          <UserSearches/>
         </Space>
 
         <div className="desktop-only" style={{ 
