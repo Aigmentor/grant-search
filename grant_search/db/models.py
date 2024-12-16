@@ -189,6 +189,7 @@ class GrantSearchQuery(Base, TimestampMixin):
     status = Column(String)
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", backref="search_queries")
+    __table_args__ = (Index("idx_grant_search_queries_user_id", "user_id"),)
 
 
 class User(Base, TimestampMixin):

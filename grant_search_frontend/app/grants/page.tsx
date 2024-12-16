@@ -18,67 +18,69 @@ interface Grant {
   awardUrl: string;
 }
 
+const createOverlay = (grantId: string, hideOverlay: () => void) : React.ReactElement => {
+  const overlayStyle = {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: 'rgba(0,0,0,0.8)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  };
+  const image = Math.random() < 0.5 ? "/static/javier-chainsaw.gif" : "/static/javier-milei-afuera.gif";
+  return <div style={overlayStyle}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '20px',
+        padding: '20px',
+        background: 'white',
+        borderRadius: '8px'
+      }}>
+        <img
+          width={500}
+          src={image}
+          alt="Javier Milei gif"
+        />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}
+            onClick={() => {
+              axios.post('/api/favorite_grant', {
+                grantId: grantId
+              })
+              .then(response => {
+                if (response.data.status === 'success') {
+                  console.log('Grant favorited successfully');
+                }
+              })
+              .catch(error => {
+                console.error('Error favoriting grant:', error);
+              });
+              console.log(grantId);
+              hideOverlay();
+            }}
+          >
+            Upvote to DOGE
+          </button>
+          <button
+            style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}
+            onClick={hideOverlay}
+          >
+            Sorry, I like waste
+          </button>
+        </div>
+      </div>
+    </div>
+}
+
+
 let downloadedGrants: Grant[] = [];
-const afueraColumn: ColumnsType<Grant>[0] = {
-  title: 'Afuera',
-  key: 'afuera', 
-  render: () => (
-    <Button
-      type="primary"
-      onClick={() => {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.8);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        `;
-        const image = Math.random() < 0.5 ? "/static/javier-chainsaw.gif" : "/static/javier-milei-afuera.gif"
-
-        overlay.innerHTML = `
-          <div style="display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px; background: white; border-radius: 8px;">
-            <img 
-              width="500" 
-              src="${image}"
-              alt="Javier Milei gif"
-            />
-            <div style="display: flex; gap: 10px;">
-              <button 
-                style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
-                onclick="window.open('https://x.com/elonmusk/status/1834104386303520822', '_blank')"
-              >
-                DOGE
-              </button>
-              <button
-                style="padding: 10px 20px; font-size: 16px; cursor: pointer;"
-                onclick="this.closest('.overlay').remove()"
-              >
-                Sorry, I like waste
-              </button>
-            </div>
-          </div>
-        `;
-
-        document.body.appendChild(overlay);
-        overlay.className = 'overlay';
-        
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) {
-            overlay.remove();
-          }
-        });
-      }}
-    >
-      Afuera
-    </Button>
-  ),
-};
 
 const titleColumn: ColumnsType<Grant>[0] = {
   title: 'Title',
@@ -91,12 +93,6 @@ const titleColumn: ColumnsType<Grant>[0] = {
     </a>
     </span>
   ),
-};
-
-const agencyColumn: ColumnsType<Grant>[0] = {
-  title: 'Agency',
-  dataIndex: 'agency',
-  key: 'agency',
 };
 
 const dataSourceColumn: ColumnsType<Grant>[0] = {
@@ -142,15 +138,6 @@ const reasonColumn: ColumnsType<Grant>[0] = {
   key: 'reason',
 };
 
-const columns: ColumnsType<Grant> = [
-  afueraColumn,
-  titleColumn,
-  dataSourceColumn,
-  amountColumn,
-  endDateColumn,
-  descriptionColumn,
-  reasonColumn
-];
 
 const isMobile = () => {
   if (typeof window !== 'undefined') {
@@ -160,10 +147,10 @@ const isMobile = () => {
 };
 
 export default function Grants(): React.ReactElement {
+  const [displayOverlay, setDisplayOverlay] = useState(undefined);
   const [queryStatus, setQueryStatus] = useState(undefined);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [samplingFraction, setSamplingFraction] = useState(1.0);
-  const [agencies, setAgencies] = useState<{id: number, name: string}[]>([]);
   const [queryId, setQueryId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -171,8 +158,36 @@ export default function Grants(): React.ReactElement {
     datasource: '',
     text: ''
   });
-  const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
   const [timedOut, setTimedOut] = useState(false);
+
+
+  const afueraColumn: ColumnsType<Grant>[0] = {
+    title: 'Afuera',
+    key: 'Afuera',
+    dataIndex: 'id', 
+    render: (grantId: string) => (
+      <Button
+        type="primary"
+        onClick={() => {
+           setDisplayOverlay(grantId);
+        }}
+      >
+        Afuera
+      </Button>
+    ),
+  };
+  
+  const columns: ColumnsType<Grant> = [
+    afueraColumn,
+    titleColumn,
+    dataSourceColumn,
+    amountColumn,
+    endDateColumn,
+    descriptionColumn,
+    reasonColumn
+  ];
+  
+  const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
 
   useEffect(() => {
     if (queryStatus === 'timed_out') {
@@ -231,34 +246,6 @@ export default function Grants(): React.ReactElement {
     }
   }, [])
   
-
-  useEffect(() => {
-    const fetchAgencies = async () => {
-      try {
-        const response = await axios.get('/api/agencies');
-        setAgencies(response.data);
-      } catch (error) {
-        console.error('Error fetching agencies:', error);
-      }
-    };
-
-    fetchAgencies();
-  }, []);
-
-  const [dataSources, setDataSources] = useState([]);
-
-  useEffect(() => {
-    const fetchDataSources = async () => {
-      try {
-        const response = await axios.get('/api/datasources');
-        setDataSources(response.data);
-      } catch (error) {
-        console.error('Error fetching data sources:', error);
-      }
-    };
-
-    fetchDataSources();
-  }, []);
 
   useEffect(() => {
     if (queryId === undefined) return;
@@ -467,6 +454,7 @@ export default function Grants(): React.ReactElement {
         }}
       />
     </div>
+    {displayOverlay && createOverlay(displayOverlay, () => setDisplayOverlay(undefined))}
     </>
   );
 }

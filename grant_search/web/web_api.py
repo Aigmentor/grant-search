@@ -8,7 +8,14 @@ from flask import Blueprint, jsonify, request, session
 from sqlalchemy import desc
 
 from grant_search.ai.query_processor import create_query
-from grant_search.db.models import Grant, Agency, DataSource, GrantSearchQuery, User
+from grant_search.db.models import (
+    FavoritedGrant,
+    Grant,
+    Agency,
+    DataSource,
+    GrantSearchQuery,
+    User,
+)
 from grant_search.db.database import get_session
 from grant_search.ai.filter_string_to_function import query_by_text
 from grant_search.filter_grants import filter_grants_query
@@ -105,6 +112,45 @@ def get_grants_by_text():
         # Query grants using the text filter
         query_id = create_query(text, user)
         return jsonify({"queryId": query_id})
+
+
+@api.route("/favorite_grant", methods=["POST"])
+def favorite_grant():
+    """Create a favorite for a grant if one doesn't already exist for this user"""
+    request_data = request.get_json()
+    if not request_data or "grantId" not in request_data:
+        return jsonify({"error": "Missing grantId parameter"}), 400
+
+    with get_session() as db_session:
+        # Get current user
+        user = (
+            db_session.query(User)
+            .filter(User.email == session.get("user_email"))
+            .first()
+        )
+
+        if not user:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        # Check if favorite already exists
+        existing_favorite = (
+            db_session.query(FavoritedGrant)
+            .filter(
+                FavoritedGrant.user_id == user.id,
+                FavoritedGrant.grant_id == request_data["grantId"],
+            )
+            .first()
+        )
+
+        if existing_favorite:
+            return jsonify({"error": "Grant already favorited"}), 400
+
+        # Create new favorite
+        favorite = FavoritedGrant(user_id=user.id, grant_id=request_data["grantId"])
+        db_session.add(favorite)
+        db_session.commit()
+
+        return jsonify({"status": "success"})
 
 
 def json_for_query(query, start_index):
