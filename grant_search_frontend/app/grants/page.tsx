@@ -6,6 +6,7 @@ import { Table, Select, Space, Button, Input, Collapse, Alert, Spin } from "antd
 import type { ColumnsType } from 'antd/es/table';
 import LoginButton from "../components/login";
 import UserSearches from "../components/userSearches";
+import UserFavorites from "../components/userFavorites";
 
 interface Grant {
   id: string;
@@ -420,8 +421,13 @@ export default function Grants(): React.ReactElement {
                 ))}
               </ul>
             </Collapse.Panel>
+            <Collapse.Panel header="Favorited Grants" key="2">
+              <UserFavorites />
+            </Collapse.Panel>
+            <Collapse.Panel header="Previous Queries" key="1">
+              <UserSearches/>
+            </Collapse.Panel>
           </Collapse>
-          <UserSearches/>
         </Space>
 
         <div className="desktop-only" style={{ 

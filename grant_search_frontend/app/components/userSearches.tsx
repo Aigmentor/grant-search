@@ -23,36 +23,32 @@ export default function UserSearches() {
       fetchSearches();
     }, []);
   
+    if (loading) {
+      return <Spin />;
+    }
+    if (searches.length === 0) {
+      return <p>No saved searches found</p>;
+    }
     return (
-      <Collapse>
-        <Collapse.Panel header="Previous Queries" key="1">
-          {loading ? (
-            <Spin />
-          ) : searches.length > 0 ? (
-            <ul style={{ listStyleType: 'none', padding: 0 }}>
-              {searches.map((search) => (
-                <li 
-                  key={search.id}
-                  style={{
-                    cursor: 'pointer',
-                    padding: '8px 0',
-                    borderBottom: '1px solid #f0f0f0'
-                  }}
-                  onClick={() => {
-                    window.location.href = `/grants?queryId=${search.id}`;
-                  }}
-                >
-                  <div>{search.query} &nbsp;
-                  <small style={{ color: '#888' }}>{search.created_at}</small>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No saved searches found</p>
-          )}
-        </Collapse.Panel>
-      </Collapse>
+        <ul style={{ listStyleType: 'none', padding: 0 }}>
+          {searches.map((search) => (
+            <li 
+              key={search.id}
+              style={{
+                cursor: 'pointer',
+                padding: '8px 0',
+                borderBottom: '1px solid #f0f0f0'
+              }}
+              onClick={() => {
+                window.location.href = `/grants?queryId=${search.id}`;
+              }}
+            >
+              <div>{search.query} &nbsp;
+              <small style={{ color: '#888' }}>{search.created_at}</small>
+              </div>
+            </li>
+          ))}
+        </ul>
     );
   };
   

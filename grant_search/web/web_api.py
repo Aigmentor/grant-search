@@ -153,6 +153,53 @@ def favorite_grant():
         return jsonify({"status": "success"})
 
 
+@api.route("/favorited_grants", methods=["POST"])
+def get_favorited_grants():
+    """Return all grants favorited by the current user"""
+    with get_session() as db_session:
+        # Get current user
+        user = (
+            db_session.query(User)
+            .filter(User.email == session.get("user_email"))
+            .first()
+        )
+
+        if not user:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        # Get all favorited grants for user
+        favorited = (
+            db_session.query(FavoritedGrant)
+            .filter(FavoritedGrant.user_id == user.id)
+            .join(Grant)
+            .join(DataSource)
+            .all()
+        )
+
+        output = []
+        for favorite in favorited:
+            grant = favorite.grant
+            data_source = grant.data_source
+            output.append(
+                {
+                    "id": str(grant.id),
+                    "title": grant.title,
+                    "agency": data_source.agency.name,
+                    "datasource": data_source.name,
+                    "amount": grant.amount,
+                    "endDate": (
+                        grant.end_date.strftime("%Y-%m-%d") if grant.end_date else None
+                    ),
+                    "description": grant.description,
+                    "awardUrl": grant.get_award_url(),
+                    "favorited_at": favorite.created_at.isoformat(),
+                    "comment": favorite.comment,
+                }
+            )
+
+        return jsonify({"favorited_grants": output})
+
+
 def json_for_query(query, start_index):
     if query.reasons is None and not query.complete:
         results = []
