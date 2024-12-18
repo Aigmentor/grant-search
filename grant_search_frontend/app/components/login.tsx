@@ -1,22 +1,15 @@
-import { Button } from 'antd';
+import { Button, Spin } from 'antd';
 import React, { useEffect, useState } from 'react'
 
-export default function LoginButton() {
-    const [loginStatus, setLoginStatus] = useState<{loggedIn: boolean, userEmail?: string}>({loggedIn: false});
-  
-    useEffect(() => {
-      const checkLoginStatus = async () => {
-        try {
-          const response = await fetch('/api/user_status');
-          const data = await response.json();
-          setLoginStatus(data);
-        } catch (err) {
-          console.error('Error checking login status:', err);
-        }
-      };
-      checkLoginStatus();
-    }, []);
-  
+export type LoginStatus = {
+  loggedIn: boolean;
+  userEmail?: string;
+}
+
+export default function LoginButton({loginStatus}: {loginStatus: LoginStatus}) {   
+    if (!loginStatus) {
+      return <Spin></Spin>
+    }
     return (
       <Button
         onClick={() => {

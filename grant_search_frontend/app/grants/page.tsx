@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Table, Select, Space, Button, Input, Collapse, Alert, Spin } from "antd";
 import type { ColumnsType } from 'antd/es/table';
-import LoginButton from "../components/login";
+import LoginButton, { LoginStatus } from "../components/login";
 import UserSearches from "../components/userSearches";
 import UserFavorites from "../components/userFavorites";
 
@@ -148,6 +148,7 @@ const isMobile = () => {
 };
 
 export default function Grants(): React.ReactElement {
+  const [loginStatus, setLoginStatus] = useState<LoginStatus>({});
   const [displayOverlay, setDisplayOverlay] = useState(undefined);
   const [queryStatus, setQueryStatus] = useState(undefined);
   const [grants, setGrants] = useState<Grant[]>([]);
@@ -161,6 +162,7 @@ export default function Grants(): React.ReactElement {
   });
   const [timedOut, setTimedOut] = useState(false);
 
+  const isLoggedIn = loginStatus && loginStatus.loggedIn;
 
   const afueraColumn: ColumnsType<Grant>[0] = {
     title: 'Afuera',
@@ -189,6 +191,19 @@ export default function Grants(): React.ReactElement {
   ];
   
   const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const response = await fetch('/api/user_status');
+        const data = await response.json();
+        setLoginStatus(data);
+      } catch (err) {
+        console.error('Error checking login status:', err);
+      }
+    };
+    checkLoginStatus();
+  }, []);
 
   useEffect(() => {
     if (queryStatus === 'timed_out') {
@@ -347,7 +362,7 @@ export default function Grants(): React.ReactElement {
 
     return (
       <>
-      <LoginButton />
+      <LoginButton loginStatus={loginStatus}/>
     <div style={{ margin: '40px 20px' }}>
       <h1>DOGEFuera</h1>
       Find wasteful grants make them go...
@@ -357,6 +372,7 @@ export default function Grants(): React.ReactElement {
       <div style={{ display: 'flex', gap: '20px' }}>
         <Space direction="vertical" className="grant-spacing">
           <Input.TextArea 
+            disabled={!isLoggedIn}
             placeholder="Describe the grants you're looking for..." 
             rows={3}
             value={filters.text}
@@ -370,10 +386,11 @@ export default function Grants(): React.ReactElement {
           />
           <Button
             type="primary"
+            disabled={!isLoggedIn}
             onClick={() => submitSearch(filters.text)}
-          >
+          > 
           {loading ? 'Searching...' : 'Search'}
-          </Button>
+          </Button> {!isLoggedIn && 'Login to search'}
           
           <div style={{ position: 'relative', marginBottom: '20px' }}>
             {loading && (

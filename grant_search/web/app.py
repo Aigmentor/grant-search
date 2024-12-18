@@ -81,7 +81,7 @@ def handle_static_missing(e):
 
 @app.route("/auth/login")
 def login():
-    logging.info(f"Calback url: {url_for("callback", _external=True)}")
+    logging.info(f"Calback url: {url_for('callback', _external=True)}")
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True)
     )
