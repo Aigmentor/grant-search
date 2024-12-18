@@ -148,7 +148,7 @@ const isMobile = () => {
 };
 
 export default function Grants(): React.ReactElement {
-  const [loginStatus, setLoginStatus] = useState<LoginStatus>({});
+  const [loginStatus, setLoginStatus] = useState<LoginStatus | undefined>(undefined);
   const [displayOverlay, setDisplayOverlay] = useState(undefined);
   const [queryStatus, setQueryStatus] = useState(undefined);
   const [grants, setGrants] = useState<Grant[]>([]);
