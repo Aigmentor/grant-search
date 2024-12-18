@@ -6,7 +6,7 @@ export type LoginStatus = {
   userEmail?: string;
 }
 
-export default function LoginButton({loginStatus}: {loginStatus: LoginStatus}) {   
+export default function LoginButton({loginStatus}: {loginStatus: LoginStatus | undefined}) {   
     if (!loginStatus) {
       return <Spin></Spin>
     }
