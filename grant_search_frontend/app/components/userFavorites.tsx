@@ -76,7 +76,7 @@ const UserFavorites: React.FC = () => {
 
   return (
     <div>
-      <h2>Favorited Grants</h2>
+      <h2>Afeura Grants</h2>
       <Table
         columns={columns}
         dataSource={favorites}

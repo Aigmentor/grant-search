@@ -20,7 +20,7 @@ export default function Grants(): React.ReactElement {
     },
     {
       key: '2', 
-      label: 'Favorited Grants',
+      label: 'Afeura Grants',
       children: <UserFavorites />,
     },
     {
