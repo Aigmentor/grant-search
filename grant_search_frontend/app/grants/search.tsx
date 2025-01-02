@@ -327,7 +327,7 @@ const afueraColumn: ColumnsType<Grant>[0] = {
       </div>
     }
 
-          <Collapse style={{ marginBottom: 16 }}>
+          <Collapse style={{ marginBottom: 16 }} defaultActiveKey={['1']}>
             <Collapse.Panel header="Search Examples" key="1">
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {[
