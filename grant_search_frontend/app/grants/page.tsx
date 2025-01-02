@@ -1,18 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import React, { useState } from "react";
+import React from "react";
 import LoginButton, { useIsLoggedIn } from "../components/login";
 import UserSearches from "../components/userSearches";
 import UserFavorites from "../components/userFavorites";
 import Search from "./search";
-import { Collapse, Tabs } from "antd";
+import { Tabs } from "antd";
 
 
 export default function Grants(): React.ReactElement {
   const loginStatus = useIsLoggedIn();
 
-  const [activeTab, setActiveTab] = useState('1');
   const items = [
     {
       key: '1',
