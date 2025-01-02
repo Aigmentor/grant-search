@@ -255,7 +255,7 @@ def query_by_text(
     session.commit()
     session.refresh(query)
 
-    with ThreadPoolExecutor(max_workers=612) as executor:
+    with ThreadPoolExecutor(max_workers=200) as executor:
         # Create list of futures for each grant query
         logging.info(f"{len(grants)} grants to scan")
         futures = [
