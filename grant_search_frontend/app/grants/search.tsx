@@ -13,9 +13,11 @@ export interface Grant {
     agency: string;
     datasource: string;
     amount: number;
-    dueDate: string;
+    endDate: string;
     status: string;
     awardUrl: string;
+    summary: string;
+    description: string;
   }
 
   const createOverlay = (grantId: string, hideOverlay: () => void) : React.ReactElement => {
@@ -95,6 +97,7 @@ const [filters, setFilters] = useState({
   });
 const [timedOut, setTimedOut] = useState(false);
 
+
 const afueraColumn: ColumnsType<Grant>[0] = {
     title: 'Afuera',
     key: 'Afuera',
@@ -114,10 +117,8 @@ const afueraColumn: ColumnsType<Grant>[0] = {
   const columns: ColumnsType<Grant> = [
     afueraColumn,
     titleColumn,
-    dataSourceColumn,
     amountColumn,
-    descriptionColumn,
-    reasonColumn
+    reasonColumn,
   ];
 
   const [activeColumns, setActiveColumns] = useState<ColumnsType<Grant>>(columns);
@@ -382,6 +383,21 @@ const afueraColumn: ColumnsType<Grant>[0] = {
           showSizeChanger: true,
           showTotal: (total) => `Total ${total} items`,
         }}
+
+        expandable={{
+            expandedRowRender: (record: Grant) => (
+              <div style={{padding: '20px'}}>
+                <h3>Grant Details</h3>
+                <p><strong>Title:</strong> {record.title}</p>
+                <p><strong>LLM Summary:</strong> <div>{record.summary}</div></p>
+                <p><strong>Description:</strong> <div dangerouslySetInnerHTML={{__html: record.description}} /></p>
+                <p><strong>Agency:</strong> {record.agency}</p>
+                <p><strong>End Date:</strong> {record.endDate}</p>
+              </div>
+            ),
+            // Optional: Control which rows can be expanded
+            rowExpandable: (record) => true
+          }}
       />
     {displayOverlay && createOverlay(displayOverlay, () => setDisplayOverlay(undefined))}
         </>

@@ -5,12 +5,13 @@ export const titleColumn: ColumnsType<Grant>[0] = {
     title: 'Title',
     dataIndex: 'title',
     key: 'title',
+    width: 550,
     render: (title: string, record: Grant) => (
-      <span> {title}
-      <a href={record.awardUrl} target="_blank" rel="noopener noreferrer">
-        [link]
-      </a>
-      </span>
+      <>
+        <span title={title}>{title.length > 100 ? title.substring(0, 100) + '...' : title}</span>
+        <a href={record.awardUrl} target="_blank" rel="noopener noreferrer" style={{marginLeft: '0.5em'}}>[link]</a>
+
+      </>
     ),
   };
   
