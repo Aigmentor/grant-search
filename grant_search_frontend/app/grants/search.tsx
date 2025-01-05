@@ -116,7 +116,6 @@ const afueraColumn: ColumnsType<Grant>[0] = {
     titleColumn,
     dataSourceColumn,
     amountColumn,
-    endDateColumn,
     descriptionColumn,
     reasonColumn
   ];
