@@ -4,22 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { Table, Collapse } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import axios from 'axios';
+import { amountColumn, titleColumn } from '../grants/grantColumns';
+import { descriptionColumn } from '../grants/grantColumns';
+import { Grant } from '../grants/search';
 
-interface FavoritedGrant {
-  id: string;
-  title: string;
-  agency: string;
-  datasource: string;
-  amount: number;
-  endDate: string;
-  description: string;
-  awardUrl: string;
-  favorited_at: string;
-  comment: string;
-}
 
 const UserFavorites: React.FC = () => {
-  const [favorites, setFavorites] = useState<FavoritedGrant[]>([]);
+  const [favorites, setFavorites] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,41 +28,8 @@ const UserFavorites: React.FC = () => {
     fetchFavorites();
   }, []);
 
-  const columns: ColumnsType<FavoritedGrant> = [
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      render: (title: string, record: FavoritedGrant) => (
-        <span>
-          {title}
-          <a href={record.awardUrl} target="_blank" rel="noopener noreferrer">
-            [link]
-          </a>
-        </span>
-      ),
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: number) => `$${amount?.toLocaleString() || 'N/A'}`,
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (description: string) => (
-        <Collapse ghost>
-          <Collapse.Panel
-            header={description?.substring(0, 50) + '...'}
-            key="1"
-          >
-            {description}
-          </Collapse.Panel>
-        </Collapse>
-      ),
-    },
+  const columns: ColumnsType<Grant> = [
+    titleColumn, amountColumn, descriptionColumn
   ];
 
   return (

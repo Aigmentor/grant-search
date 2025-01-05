@@ -34,6 +34,24 @@ def check_auth():
 api.before_request(check_auth)
 
 
+def json_for_grant(grant: Grant, favorite: FavoritedGrant = None, reason: str = None):
+    data_source = grant.data_source
+    return {
+        "id": str(grant.id),
+        "title": grant.title,
+        "agency": data_source.agency.name,
+        "datasource": data_source.name,
+        "amount": grant.amount,
+        "endDate": (grant.end_date.strftime("%Y-%m-%d") if grant.end_date else None),
+        "description": grant.description,
+        "summary": grant.derived_data.summary,
+        "awardUrl": grant.get_award_url(),
+        "favorited_at": favorite.created_at.isoformat() if favorite else None,
+        "comment": favorite.comment if favorite else None,
+        "reason": reason,
+    }
+
+
 @api.route("/upload_datasource", methods=["POST"])
 def upload_datasource():
     """Create a new datasource from form parameters"""
@@ -179,23 +197,7 @@ def get_favorited_grants():
         output = []
         for favorite in favorited:
             grant = favorite.grant
-            data_source = grant.data_source
-            output.append(
-                {
-                    "id": str(grant.id),
-                    "title": grant.title,
-                    "agency": data_source.agency.name,
-                    "datasource": data_source.name,
-                    "amount": grant.amount,
-                    "endDate": (
-                        grant.end_date.strftime("%Y-%m-%d") if grant.end_date else None
-                    ),
-                    "description": grant.description,
-                    "awardUrl": grant.get_award_url(),
-                    "favorited_at": favorite.created_at.isoformat(),
-                    "comment": favorite.comment,
-                }
-            )
+            output.append(json_for_grant(grant, favorite))
 
         return jsonify({"favorited_grants": output})
 
@@ -213,20 +215,7 @@ def json_for_query(query, start_index):
     results = list(results)[start_index:]
     for result in results:
         grant, reason = result
-        data_source = grant.data_source
-        output.append(
-            {
-                "id": str(grant.id),
-                "title": grant.title,
-                "agency": data_source.agency.name,
-                "datasource": data_source.name,
-                "amount": grant.amount,
-                "endDate": grant.end_date.strftime("%Y-%m-%d"),
-                "description": grant.description,
-                "reason": reason,
-                "awardUrl": grant.get_award_url(),
-            }
-        )
+        output.append(json_for_grant(grant, reason=reason))
 
     return {
         "status": "success" if query.complete else query.status,
@@ -281,18 +270,7 @@ def get_grants():
 
             # Order by due date descending
             query = query.order_by(desc(Grant.end_date))
-            grants = [
-                {
-                    "id": str(grant.id),
-                    "title": grant.title,
-                    "agency": grant.data_source.agency.name,
-                    "datasource": grant.data_source.name,
-                    "amount": grant.amount,
-                    "endDate": grant.end_date.strftime("%Y-%m-%d"),
-                    "description": grant.description,
-                }
-                for grant in query.all()
-            ]
+            grants = [json_for_grant(grant) for grant in query.all()]
 
             return jsonify(grants)
 

@@ -1,6 +1,5 @@
 import { ColumnsType } from "antd/es/table";
 import { Grant } from "./search";
-import { Collapse } from "antd";
 
 export const titleColumn: ColumnsType<Grant>[0] = {
     title: 'Title',
@@ -37,19 +36,19 @@ export const titleColumn: ColumnsType<Grant>[0] = {
   };
   
   export const descriptionColumn: ColumnsType<Grant>[0] = {
-    title: 'Description',
-    dataIndex: 'description',
-    key: 'description',
-    render: (description: string) => (
-      <Collapse ghost>
-        <Collapse.Panel 
-          header={description?.substring(0, 50) + '...'} 
-          key="1"
-        >
-          {description}
-        </Collapse.Panel>
-      </Collapse>
-    ),
+    title: 'Summary',
+    dataIndex: 'summary',
+    key: 'summary',
+    // render: (description: string) => (
+    //   <Collapse ghost>
+    //     <Collapse.Panel 
+    //       header={description?.substring(0, 50) + '...'} 
+    //       key="1"
+    //     >
+    //       {description}
+    //     </Collapse.Panel>
+    //   </Collapse>
+    // ),
   };
   
   export const reasonColumn: ColumnsType<Grant>[0] = {
