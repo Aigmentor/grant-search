@@ -9,7 +9,7 @@ import traceback
 
 from sqlalchemy.orm import undefer
 
-from grant_search.ai.common import format_for_llm, ai_client
+from grant_search.ai.common import format_for_llm, get_ai_client
 from grant_search.db.database import Session
 from grant_search.db.models import DEIStatus, Grant, GrantDerivedData
 
@@ -57,6 +57,10 @@ class GrantAnalysis(BaseModel):
         """,
     )
 
+    summary: str = Field(
+        description="A succinct (80-120 tokens) summary of the grant's description/topic and what they hope to achieve.",
+    )
+
 
 MODEL = "gpt-4o"
 
@@ -70,7 +74,7 @@ class SendToAI:
     client: Instructor
 
     def __init__(self):
-        self.client = ai_client
+        self.client = get_ai_client()
 
     def complete_partial_grants(self):
         with Session() as session:

@@ -9,7 +9,7 @@ import logging
 from sqlalchemy.orm import undefer
 from sqlalchemy.orm.query import Query
 
-from grant_search.ai.common import ai_client, format_for_llm
+from grant_search.ai.common import get_ai_client, format_for_llm
 from grant_search.db.database import get_session
 from grant_search.db.models import (
     Agency,
@@ -116,7 +116,7 @@ Fill out the results with appropriate JSON as described by the schema.
 def _get_search_function(text: str) -> SearchFunction:
     text = f"User description: {text}"
     messages = format_for_llm(SYSTEM_PROMPT, text)
-    return ai_client.chat.completions.create(
+    return get_ai_client().chat.completions.create(
         model=TOP_LEVEL_MODEL,
         messages=messages,
         response_model=SearchFunction,
@@ -216,7 +216,7 @@ def filter_grants_by_query(user_query: str, grant: Grant) -> Tuple[Grant, bool, 
             grant_text = grant.raw_text
 
         messages = format_for_llm(prompt, f'grant_description: \n"{grant_text}"')
-        result = ai_client.chat.completions.create(
+        result = get_ai_client().chat.completions.create(
             model=FILTER_MODEL,
             messages=messages,
             response_model=GrantFilter,

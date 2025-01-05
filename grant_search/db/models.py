@@ -112,7 +112,10 @@ class Grant(Base):
 
     # Update the relationship to include cascade delete
     derived_data = relationship(
-        "GrantDerivedData", back_populates="grant", cascade="all, delete-orphan"
+        "GrantDerivedData",
+        back_populates="grant",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
     embeddings = relationship(
@@ -147,6 +150,7 @@ class GrantDerivedData(Base):
     hard_science = Column(Boolean)
     political_science = Column(Boolean)
     carbon = Column(Boolean)
+    summary = Column(String)
 
     grant = relationship("Grant", back_populates="derived_data")
 

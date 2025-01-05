@@ -5,9 +5,9 @@ import json
 import logging
 from typing import Optional
 
-from cleanmail import common
-from cleanmail.gmail.stats import compute_stats
-from cleanmail.gmail.clean_user import clean_email_for_user
+from grant_search import common
+from grant_search.gmail.stats import compute_stats
+from grant_search.gmail.clean_user import clean_email_for_user
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -16,10 +16,10 @@ if __name__ == "__main__":
 import sys
 import threading
 
-from cleanmail.gmail import scan
-from cleanmail.db.redis import publish, subscribe
-from cleanmail.db.models import GmailSender, GoogleUser
-from cleanmail.db import database
+from grant_search.gmail import scan
+from grant_search.db.redis import publish, subscribe
+from grant_search.db.models import GmailSender, GoogleUser
+from grant_search.db import database
 
 _MAX_SCAN_THREADS = 5
 _WORKER_TASKS_QUEUE = "worker_queue"
